@@ -113,11 +113,10 @@ if __name__ == "__main__":
     # OpenAQ API key
     if is_running_in_databricks():
         api_key = dbutils.secrets.get(scope = "air-polution-analytics APIs keys", key = "OPENAQ_API_KEY") # type: ignore
+        datastore = dbutils.widgets.get("DATASTORE_PATH") # type: ignore
     else:
         api_key = os.environ['OPENAQ_API_KEY']
-
-    # Datastore path
-    datastore = os.environ['DATASTORE_PATH']
+        datastore = os.environ['DATASTORE_PATH']
 
     connection_mgr = OpenAQConnectionManager(api_key)
     client = connection_mgr.recycle_client()
