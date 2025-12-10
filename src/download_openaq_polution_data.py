@@ -104,10 +104,17 @@ def get_measurements(client: openaq.OpenAQ, sensor_id: int, year: int, page_num:
     return result
 
 
+def is_running_in_databricks() -> bool:
+    return "DATABRICKS_RUNTIME_VERSION" in os.environ
+
+
 if __name__ == "__main__":
 
     # OpenAQ API key
-    api_key = os.environ['OPENAQ_API_KEY']
+    if is_running_in_databricks():
+        api_key = dbutils.secrets.get(scope = "air-polution-analytics APIs keys", key = "OPENAQ_API_KEY") # type: ignore
+    else:
+        api_key = os.environ['OPENAQ_API_KEY']
 
     # Datastore path
     datastore = os.environ['DATASTORE_PATH']
