@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import time
@@ -5,6 +6,7 @@ from typing import Any
 import openaq
 import zipfile
 from itertools import product
+from argparse import ArgumentParser
 
 
 class TimeoutErrorExt(openaq.TimeoutError):
@@ -108,15 +110,25 @@ def is_running_in_databricks() -> bool:
     return "DATABRICKS_RUNTIME_VERSION" in os.environ
 
 
-if __name__ == "__main__":
-
+def setup_environment() -> tuple[str, str]:
     # OpenAQ API key
     if is_running_in_databricks():
+        print("Running inside Databricks")
+        argparse = ArgumentParser()
+        argparse.add_argument("--datastore_path", type=str)
+        args = argparse.parse_args()
+
         api_key = dbutils.secrets.get(scope = "air-polution-analytics APIs keys", key = "OPENAQ_API_KEY") # type: ignore
-        datastore = dbutils.widgets.get("DATASTORE_PATH") # type: ignore
+        datastore = args.datastore_path
     else:
+        print("Running inside IDE")
         api_key = os.environ['OPENAQ_API_KEY']
         datastore = os.environ['DATASTORE_PATH']
+
+    return (api_key, datastore)
+
+def main():
+    api_key, datastore = setup_environment()
 
     connection_mgr = OpenAQConnectionManager(api_key)
     client = connection_mgr.recycle_client()
@@ -134,8 +146,7 @@ if __name__ == "__main__":
     locations = client.locations.list(coordinates=belgrade_coordinates, radius=8000, limit=1000)
 
     # Store the locations for processing
-    with zipfile.ZipFile(datastore + 'Belgrade-locations.json.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as file:
-        file.writestr('Belgrade-locations.json', json.dumps(locations.json(), indent=4))
+    store_zipped(datastore + 'Belgrade-locations.json.zip', json.dumps(locations.json(), indent=4))
     print(f'Got {len(locations.results)} locations')
     
     for l in locations.results:
@@ -165,14 +176,12 @@ if __name__ == "__main__":
                     if not page:
                         break
 
-                    # Store the data in zipped format. This shrinks the files about 50 times 
-                    with zipfile.ZipFile(datastore + filename + '.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as file:
-                        file.writestr(filename, json.dumps(page, indent=4))
+                    # Store the data in zipped format. This shrinks the files about 50 times
+                    store_zipped(datastore + filename + '.zip', json.dumps(page, indent=4))
                 except TimeoutErrorExt as e:
                     if timed_out == 3:
                         # If the API timed out 3 times in a row, cancel trying and bail the whole thing
                         print('  Timed out 3 times, canceling')
-                        # client.close()
                         raise e
                     else:
                         # If the API timed out, try resetting the connection and wait for the API suggested amount of seconds
@@ -181,4 +190,16 @@ if __name__ == "__main__":
                         time.sleep(e.timeout_seconds)
                         client = connection_mgr.recycle_client()
 
-    # client.close()
+
+def store_zipped(filename: str, data: str):
+
+    zipped_content = io.BytesIO()
+    with zipfile.ZipFile(zipped_content, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as file:
+        file.writestr('Belgrade-locations.json', data)
+
+    with open(filename, "wb") as f:
+        f.write(zipped_content.getvalue())
+
+
+if __name__ == "__main__":
+    main()
