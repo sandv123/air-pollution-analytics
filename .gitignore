@@ -1,6 +1,5 @@
-
 .databricks
 .venv
 .vscode
 data
-databricks.yml
+air_polution_analytics
