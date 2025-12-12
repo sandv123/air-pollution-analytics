@@ -1,4 +1,5 @@
 # Load Belgrade polution data through OpenAQ API job
+resources:
   jobs:
     load_openaq_data:
       name: Load Belgrade polution data through OpenAQ API
