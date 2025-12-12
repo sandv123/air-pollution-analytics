@@ -131,14 +131,14 @@ def setup_environment() -> tuple[str, str]:
     return (api_key, datastore)
 
 
-def mark_finished_chunk(datastore: str, name: str) -> None:
-    with open(datastore + f'{name}.finished', 'w') as f:
+def mark_processed_chunk(datastore: str, name: str, tag: str) -> None:
+    with open(datastore + f'{name}.{tag}', 'w') as f:
         f.write("done")
         f.flush()
 
 
-def check_finished_chunk(datastore: str, name: str) -> bool:
-    return os.path.exists(datastore + f'{name}.finished')
+def check_processed_chunk(datastore: str, name: str, tag: str) -> bool:
+    return os.path.exists(datastore + f'{name}.{tag}')
 
 
 def main():
@@ -162,7 +162,7 @@ def main():
     # locations = client.locations.get(2812630) # This is for debugging purposes
 
     # Store the locations for processing
-    store_zipped(datastore + 'Belgrade-locations.json.zip', json.dumps(locations.json(), indent=4))
+    store_zipped(datastore, 'Belgrade-locations.json', json.dumps(locations.json(), indent=4))
     print(f'Got {len(locations.results)} locations')
 
     for l in locations.results:
@@ -180,7 +180,7 @@ def main():
         for year_and_sensor in product(years, sensor_ids):
             year_and_sensor_name = f'{l.id}_{year_and_sensor[1]}_{l.country.code}_{name}_{year_and_sensor[0]}'
             print(f'  Downloading chunk {year_and_sensor_name}')
-            if check_finished_chunk(datastore, year_and_sensor_name):
+            if check_processed_chunk(datastore, year_and_sensor_name, 'finished'):
                 print(f'  Chunk {year_and_sensor_name} already downloaded, skipping')
                 continue
 
@@ -201,15 +201,17 @@ def main():
                         break
 
                     # Store the data in zipped format. This shrinks the files about 50 times
-                    store_zipped(datastore + filename + '.zip', json.dumps(page, indent=4))
+                    store_zipped(datastore, filename, json.dumps(page, indent=4))
                 except TimeoutErrorExt as e:
                     if timed_out == 3:
                         print(f'  Timed out (API) 3 times, skipping page {filename}')
+                        mark_processed_chunk(datastore, filename, 'skipped_page')
                         client = connection_mgr.recycle_client(0)
                         timed_out += 1
                         continue
                     if timed_out == 5:
                         print(f'  Timed out (API) 5 times, skipping chunk {name}')
+                        mark_processed_chunk(datastore, filename, 'skipped_chunk')
                         client = connection_mgr.recycle_client(0)
                         timed_out += 1
                         break
@@ -223,22 +225,25 @@ def main():
                         print(f'TIMED OUT OPENAQ, sleeping for {time_to_sleep} seconds, {e}')
                         timed_out += 1
                         client = connection_mgr.recycle_client(time_to_sleep)
+                        page_num -= 1
                 except httpcore.ReadTimeout as e:
                     print(f'TIMED OUT HTTP READ, sleeping for 60 seconds, {e}')
                     client = connection_mgr.recycle_client(60)
+                    page_num -= 1
                 except TimeoutError as e:
                     print(f'TIMED OUT NETWORK/IO, sleeping for 60 seconds, {e}')
                     client = connection_mgr.recycle_client(60)
-            mark_finished_chunk(datastore, year_and_sensor_name)
+                    page_num -= 1
+            mark_processed_chunk(datastore, year_and_sensor_name, 'finished')
 
 
-def store_zipped(filename: str, data: str):
+def store_zipped(datastore:str, filename: str, data: str):
 
     zipped_content = io.BytesIO()
     with zipfile.ZipFile(zipped_content, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as file:
-        file.writestr('Belgrade-locations.json', data)
+        file.writestr(filename, data)
 
-    with open(filename, "wb") as f:
+    with open(datastore + filename + ".zip", "wb") as f:
         f.write(zipped_content.getvalue())
 
 
