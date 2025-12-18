@@ -1,0 +1,11 @@
+resources:
+  pipelines:
+    ingest-openaq-measurements:
+      name: Ingest OpenAQ Measurements
+      catalog: air_polution_analytics_dev
+      schema: 01_bronze
+      serverless: true
+      root_path: ../src/pipelines/ingest_openaq_measurements
+      libraries:
+      -  glob:
+          include: ../src/pipelines/ingest_openaq_measurements/transformations/**
