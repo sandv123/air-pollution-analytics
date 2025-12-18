@@ -162,7 +162,7 @@ def main():
     # locations = client.locations.get(2812630) # This is for debugging purposes
 
     # Store the locations for processing
-    store_zipped(datastore, 'Belgrade-locations.json', json.dumps(locations.json(), indent=4))
+    store_zipped(datastore, 'Belgrade-locations.json', json.dumps(json.loads(locations.json()), indent=4))
     print(f'Got {len(locations.results)} locations')
 
     for l in locations.results:
@@ -175,7 +175,7 @@ def main():
         print(f'Downloading measurements for station {name}')
 
         # years = [2025] # This is for debugging purposes
- 
+        
         timed_out = 0
         for year_and_sensor in product(years, sensor_ids):
             year_and_sensor_name = f'{l.id}_{year_and_sensor[1]}_{l.country.code}_{name}_{year_and_sensor[0]}'
