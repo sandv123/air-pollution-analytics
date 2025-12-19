@@ -1,10 +1,13 @@
 resources:
   pipelines:
     ingest-openaq-measurements:
-      name: Ingest OpenAQ Measurements
+      name: Ingest OpenAQ Data
       catalog: air_polution_analytics_dev
       schema: 01_bronze
       serverless: true
+      channel: CURRENT
+      continuous: false
+      photon: true
       root_path: ../src/pipelines/ingest_openaq_measurements
       libraries:
       -  glob:
