@@ -2,14 +2,15 @@ from pyspark.sql.functions import col, current_timestamp
 from pyspark import pipelines as dp # type: ignore
 
 landing_catalog = "air_polution_analytics_dev"
-schema = "00_landing"
+landing_schema = "00_landing"
 
-base_path = f"/Volumes/{landing_catalog}/{schema}/openaq"
-source_path = f"{base_path}/new"
+base_path = f"/Volumes/{landing_catalog}/{landing_schema}/openaq"
+measurements_path = f"{base_path}/measurements"
+locations_path = f"{base_path}/locations"
 metadata_path = f"{base_path}/_metadata"
 
 @dp.table(
-    name="air_quality_measurements_bronze",
+    name="air_quality_measurements",
     comment="Ingested raw OpenAQ measurements data"
 )
 def raw_measurements():
@@ -17,13 +18,36 @@ def raw_measurements():
         spark.readStream
         .format("cloudFiles")
         .option("multiline", "true")
-        .option("pathGlobfilter", "*.json")
+        .option("pathGlobfilter", "[0-9]*.json")
         .option("cloudFiles.format", "json")
         .option("cloudFiles.inferColumnTypes", "true")
         .option("cloudFiles.schemaLocation", f"{metadata_path}/_schema")
         .option("cloudFiles.maxFilesPerTrigger", 1)
         .option("cloudFiles.schemaHints", "results.element.period.datetimeFrom.local STRING, results.element.period.datetimeFrom.utc TIMESTAMP, results.element.period.datetimeTo.local STRING, results.element.period.datetimeTo.utc TIMESTAMP, results.element.value FLOAT, results.element.parameter.id INT")
-        .load(source_path)
+        .load(measurements_path)
+        .selectExpr('explode(results) as results')
+        .select("*", col("_metadata.file_name").alias("source_file_name"))
+        .withColumn("bronze_load_ts", current_timestamp())
+    )
+
+
+@dp.table(
+    name="locations",
+    comment="Ingested raw OpenAQ locations data"
+)
+def locations():
+    return (spark.readStream
+        .format("cloudFiles")
+        .option("multiline", "true")
+        .option("cloudFiles.format", "json")
+        .option("pathGlobfilter", "[a-zA-Z]*-locations*.json")
+        .option("cloudFiles.inferColumnTypes", "true")
+        .option("cloudFiles.schemaLocation", f"{metadata_path}/_schema")
+        .option("cloudFiles.maxFilesPerTrigger", 1)
+        .option("cloudFiles.schemaHints", "results.element.id INT, results.element.coordinates STRUCT<latitude FLOAT, longitude FLOAT>")
+        # "results.element.coordinates.latitude FLOAT, results.element.coordinates.longitude FLOAT")
+        # "period.datetimeFrom.local STRING, results.element.period.datetimeFrom.utc TIMESTAMP, results.element.period.datetimeTo.local STRING, results.element.period.datetimeTo.utc TIMESTAMP, results.element.value FLOAT, results.element.parameter.id INT")
+        .load(locations_path)
         .selectExpr('explode(results) as results')
         .select("*", col("_metadata.file_name").alias("source_file_name"))
         .withColumn("bronze_load_ts", current_timestamp())
