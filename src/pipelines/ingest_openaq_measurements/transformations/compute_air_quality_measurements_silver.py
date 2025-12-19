@@ -21,9 +21,6 @@ def compute_air_quality_measurements_silver():
             .select(col("results.period.datetimeFrom.utc").alias("datetime_from"),
                     col("results.period.datetimeTo.utc").alias("datetime_to"),
                     col("results.value"),
-                    # col("results.parameter.id").alias("parameter_id"),
-                    # col("results.parameter.name").alias("parameter_name"),
-                    # col("results.parameter.units").alias("parameter_units"),
                     col("results.coordinates"),
                     col("source_file_name"),
                     col("results.period.interval").alias("interval"),)
@@ -31,7 +28,6 @@ def compute_air_quality_measurements_silver():
     split_col = split(df.source_file_name, "_")
     df = (df.withColumn("location_id", split_col.getItem(0))
             .withColumn("sensor_id", split_col.getItem(1))
-            .withColumn("location_name", split_col.getItem(3))
     )
 
     return df
