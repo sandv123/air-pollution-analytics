@@ -16,7 +16,7 @@ resources:
           spark_python_task:
             parameters:
               - "--datastore_path"
-              - "/Volumes/air_polution_analytics_dev/historic_data/openaq_historic"
+              - ${var.datastore_path}
             python_file: ../src/download_openaq_polution_data.py
 
       environments:

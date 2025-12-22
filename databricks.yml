@@ -5,6 +5,10 @@
 bundle:
   name: air_polution_analytics
 
+variables:
+  datastore_path:
+    default: /Volumes/air_polution_analytics_dev/historic_data/openaq_historic
+
 sync:
   paths:
     - .
@@ -18,6 +22,8 @@ targets:
     default: true
     workspace:
       host: https://dbc-b6c6205b-3d0e.cloud.databricks.com
+    variables:
+      datastore_path: /Volumes/air_polution_analytics_dev/historic_data/openaq_historic
 
   ## Optionally, there could be 'staging' or 'prod' targets here.
   #
