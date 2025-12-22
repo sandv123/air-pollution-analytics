@@ -1,62 +1,90 @@
+from pyspark.sql.types import ArrayType, IntegerType
 from pyspark import pipelines as dp # type: ignore
-from pyspark.sql.functions import col, split
+from pyspark.sql.functions import col, split, collect_set
 
 catalog = "air_polution_analytics_dev"
 bronze_schema = "01_bronze"
 silver_schema = "02_silver"
-filename_re = r"^(d+)_(d+)_(D+)_(.+)_"
+filename_re = r"^(\d+)_(\d+)_(.+)_(.+)_\d"
 
 @dp.table(
     name=f"{catalog}.{silver_schema}.air_quality_measurements",
     comment="OpenAQ Air quality measurements"
+    # Databricks recommends to avoid partitioning tables less that 1Tb in size,
+    # thus no partitioning is enabled
 )
-@dp.expect("period interval is 1 hour", "interval = '01:00:00'")
-@dp.expect("datetime_from is not null", "datetime_from IS NOT NULL")
-@dp.expect("value is not null", "value IS NOT NULL")
-@dp.expect("location_id is not null", "location_id IS NOT NULL")
-@dp.expect("sensor_id is not null", "sensor_id IS NOT NULL")
+@dp.expect_all_or_drop({
+                        "period interval is 1 hour": "interval = '01:00:00'",
+                        "datetime_from is not null": "datetime_from IS NOT NULL",
+                        "value is not null": "value IS NOT NULL",
+                        "location_id is not null": "location_id IS NOT NULL",
+                        "sensor_id is not null": "sensor_id IS NOT NULL"
+})
 def compute_air_quality_measurements_silver():
     df = (
         spark.readStream.table(f"{catalog}.{bronze_schema}.air_quality_measurements")
             .select(col("results.period.datetimeFrom.utc").alias("datetime_from"),
                     col("results.period.datetimeTo.utc").alias("datetime_to"),
-                    col("results.value"),
-                    col("results.coordinates"),
+                    col("results.value").alias("value").cast("float"),
                     col("source_file_name"),
-                    col("results.period.interval").alias("interval"),)
+                    col("results.period.interval").alias("interval"))
     )
     split_col = split(df.source_file_name, "_")
-    df = (df.withColumn("location_id", split_col.getItem(0))
-            .withColumn("sensor_id", split_col.getItem(1))
+    df = (df.withColumn("location_id", split_col.getItem(0).cast("int"))
+            .withColumn("sensor_id", split_col.getItem(1).cast("int"))
+            .drop(col("source_file_name"))
     )
 
     return df
+
+
+@dp.temporary_view
+def locations_temp():
+    locations_df = spark.read.table(f"{catalog}.{bronze_schema}.locations")
+    return (
+        locations_df.select(
+                    col("results.id").alias("id").cast("int"),
+                    col("results.name").alias("name"),
+                    col("results.locality").alias("locality"),
+                    col("results.country.code").alias("country"),
+                    col("results.isMobile").alias("is_mobile"),
+                    col("results.isMonitor").alias("is_monitor"),
+                    col("results.coordinates.latitude").alias("latitude").cast("float"),
+                    col("results.coordinates.longitude").alias("longitude").cast("float"),
+                    col("results.sensors").alias("sensors")
+        )       
+    )
 
 
 @dp.materialized_view(
     name=f"{catalog}.{silver_schema}.locations",
     comment="Air quality locations",
 )
+@dp.expect_all_or_drop({
+    "id is not null": "id IS NOT NULL",
+    "name is not null": "name IS NOT NULL"
+})
 def locations():
-    locations_df = spark.read.table(f"{catalog}.{bronze_schema}.locations")
+    locations_df = spark.read.table("locations_temp")
     return (
         locations_df.select(
-                    col("results.id").alias("id"),
-                    col("results.name").alias("name"),
-                    col("results.locality").alias("locality"),
-                    col("results.country.code").alias("country"),
-                    col("results.isMobile").alias("isMobile"),
-                    col("results.isMonitor").alias("isMonitor"),
-                    col("results.coordinates.latitude").alias("latitude"),
-                    col("results.coordinates.longitude").alias("longitude")
-        )       
+            col("id"),
+            col("name"),
+            col("locality"),
+            col("country"),
+            col("is_mobile"),
+            col("is_monitor"),
+            col("latitude"),
+            col("longitude"),
+            col("sensors.id").alias("sensor_id_arr").cast(ArrayType(IntegerType()))
+        )
     )
 
 
 @dp.temporary_view
-def raw_sensors():
-    locations_df = spark.read.table(f"{catalog}.{bronze_schema}.locations")
-    sensors_df = locations_df.selectExpr("results.id as id", "explode(results.sensors) as sensors")
+def sensors_temp():
+    locations_df = spark.read.table("locations_temp")
+    sensors_df = locations_df.selectExpr("id", "explode(sensors) as sensors")
     return(
         sensors_df.select(
             col("sensors.id").alias("id"),
@@ -70,12 +98,17 @@ def raw_sensors():
     name=f"{catalog}.{silver_schema}.sensors",
     comment="OpenAQ Sensor information",
 )
+@dp.expect_all_or_drop({
+    "id is not null": "id IS NOT NULL"
+})
 def sensors():
     return (
-        spark.read.table("raw_sensors").select(
-            col("id"),
-            col("name")
-        )
+        spark.read.table("sensors_temp")
+            .select(
+                col("id").cast("int"),
+                col("name"),
+                col("parameter.id").alias("parameter_id").cast("int")
+            )
     )
 
 
@@ -83,19 +116,16 @@ def sensors():
     name=f"{catalog}.{silver_schema}.parameters",
     comment="OpenAQ Sensor Parameters information",
 )
+@dp.expect_all_or_drop({
+    "id is not null": "id IS NOT NULL",
+    "name is not null": "name IS NOT NULL",
+})
 def parameters():
     return (
-        spark.read.table("raw_sensors").select(
-            col("parameter.id").alias("id"),
+        spark.read.table("sensors_temp").select(
+            col("parameter.id").cast("int").alias("id"),
             col("parameter.displayName").alias("display_name"),
             col("parameter.name").alias("name"),
             col("parameter.units").alias("units")
         ).distinct()
-
-        # spark.read.table("raw_sensors").selectExpr(
-        #     "distinct parameter.id as id",
-        #     "parameter.displayName as display_name",
-        #     "parameter.name as name",
-        #     "parameter.units as units"
-        # )
     )
