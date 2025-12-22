@@ -1,16 +1,17 @@
 from pyspark.sql.functions import col, current_timestamp
 from pyspark import pipelines as dp # type: ignore
 
-landing_catalog = "air_polution_analytics_dev"
+catalog = "air_polution_analytics_dev"
 landing_schema = "00_landing"
+bronze_schema = "01_bronze"
 
-base_path = f"/Volumes/{landing_catalog}/{landing_schema}/openaq"
+base_path = f"/Volumes/{catalog}/{landing_schema}/openaq"
 measurements_path = f"{base_path}/measurements"
 locations_path = f"{base_path}/locations"
 metadata_path = f"{base_path}/_metadata"
 
 @dp.table(
-    name="air_quality_measurements",
+    name=f"{catalog}.{bronze_schema}.air_quality_measurements",
     comment="Ingested raw OpenAQ measurements data"
 )
 def raw_measurements():
@@ -32,7 +33,7 @@ def raw_measurements():
 
 
 @dp.table(
-    name="locations",
+    name=f"{catalog}.{bronze_schema}.locations",
     comment="Ingested raw OpenAQ locations data"
 )
 def locations():
@@ -45,8 +46,6 @@ def locations():
         .option("cloudFiles.schemaLocation", f"{metadata_path}/_schema")
         .option("cloudFiles.maxFilesPerTrigger", 1)
         .option("cloudFiles.schemaHints", "results.element.id INT, results.element.coordinates STRUCT<latitude FLOAT, longitude FLOAT>")
-        # "results.element.coordinates.latitude FLOAT, results.element.coordinates.longitude FLOAT")
-        # "period.datetimeFrom.local STRING, results.element.period.datetimeFrom.utc TIMESTAMP, results.element.period.datetimeTo.local STRING, results.element.period.datetimeTo.utc TIMESTAMP, results.element.value FLOAT, results.element.parameter.id INT")
         .load(locations_path)
         .selectExpr('explode(results) as results')
         .select("*", col("_metadata.file_name").alias("source_file_name"))
