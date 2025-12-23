@@ -16,7 +16,7 @@ resources:
           spark_python_task:
             parameters:
               - "--datastore_path"
-              - ${var.datastore_path}
+              - ${var.datastore_path}/openaq_historic
             python_file: ../src/download_openaq_polution_data.py
 
       environments:

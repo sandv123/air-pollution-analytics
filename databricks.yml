@@ -7,7 +7,7 @@ bundle:
 
 variables:
   datastore_path:
-    default: /Volumes/air_polution_analytics_dev/historic_data/openaq_historic
+    default: /Volumes/air_polution_analytics_dev/historic_data
 
 sync:
   paths:
