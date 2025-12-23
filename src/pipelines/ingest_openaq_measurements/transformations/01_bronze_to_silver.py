@@ -5,7 +5,6 @@ from pyspark.sql.functions import col, split, collect_set
 catalog = "air_polution_analytics_dev"
 bronze_schema = "01_bronze"
 silver_schema = "02_silver"
-filename_re = r"^(\d+)_(\d+)_(.+)_(.+)_\d"
 
 @dp.table(
     name=f"{catalog}.{silver_schema}.air_quality_measurements",
