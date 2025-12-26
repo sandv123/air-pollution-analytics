@@ -8,7 +8,7 @@ silver_schema = "02_silver"
 
 @dp.table(
     name=f"{catalog}.{silver_schema}.air_quality_measurements",
-    comment="OpenAQ Air quality measurements"
+    comment="Cleaned OpenAQ Air quality measurements"
     # Databricks recommends to avoid partitioning tables less that 1Tb in size,
     # thus no partitioning is enabled
 )
@@ -36,10 +36,10 @@ def compute_air_quality_measurements_silver():
 
     return df
 
-
+# TODO: update read to readStream!!!
 @dp.temporary_view
 def locations_temp():
-    locations_df = spark.read.table(f"{catalog}.{bronze_schema}.locations")
+    locations_df = spark.readStream.table(f"{catalog}.{bronze_schema}.locations")
     return (
         locations_df.select(
                     col("results.id").alias("id").cast("int"),
@@ -57,7 +57,7 @@ def locations_temp():
 
 @dp.materialized_view(
     name=f"{catalog}.{silver_schema}.locations",
-    comment="Air quality locations",
+    comment="Cleaned Air quality locations",
 )
 @dp.expect_all_or_drop({
     "id is not null": "id IS NOT NULL",
@@ -82,7 +82,7 @@ def locations():
 
 @dp.temporary_view
 def sensors_temp():
-    locations_df = spark.read.table("locations_temp")
+    locations_df = spark.readStream.table("locations_temp")
     sensors_df = locations_df.selectExpr("id", "explode(sensors) as sensors")
     return(
         sensors_df.select(
@@ -95,7 +95,7 @@ def sensors_temp():
 
 @dp.materialized_view(
     name=f"{catalog}.{silver_schema}.sensors",
-    comment="OpenAQ Sensor information",
+    comment="Cleaned OpenAQ Sensor information",
 )
 @dp.expect_all_or_drop({
     "id is not null": "id IS NOT NULL"
@@ -113,7 +113,7 @@ def sensors():
 
 @dp.materialized_view(
     name=f"{catalog}.{silver_schema}.parameters",
-    comment="OpenAQ Sensor Parameters information",
+    comment="Cleaned OpenAQ Sensor Parameters information",
 )
 @dp.expect_all_or_drop({
     "id is not null": "id IS NOT NULL",
@@ -128,3 +128,5 @@ def parameters():
             col("parameter.units").alias("units")
         ).distinct()
     )
+
+
