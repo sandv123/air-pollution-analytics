@@ -1,0 +1,14 @@
+resources:
+  pipelines:
+    ingest-openmeteo-measurements:
+      name: Ingest and Clean Open-meteo Data
+      catalog: air_polution_analytics_dev
+      schema: 01_bronze
+      serverless: true
+      channel: CURRENT
+      continuous: false
+      photon: true
+      root_path: ../src/pipelines/ingest_openmeteo_measurements
+      libraries:
+      -  glob:
+          include: ../src/pipelines/ingest_openmeteo_measurements/transformations/**
