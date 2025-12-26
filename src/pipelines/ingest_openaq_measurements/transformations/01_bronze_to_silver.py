@@ -6,6 +6,7 @@ catalog = "air_polution_analytics_dev"
 bronze_schema = "01_bronze"
 silver_schema = "02_silver"
 
+
 @dp.table(
     name=f"{catalog}.{silver_schema}.air_quality_measurements",
     comment="Cleaned OpenAQ Air quality measurements"
@@ -36,7 +37,7 @@ def compute_air_quality_measurements_silver():
 
     return df
 
-# TODO: update read to readStream!!!
+
 @dp.temporary_view
 def locations_temp():
     locations_df = spark.readStream.table(f"{catalog}.{bronze_schema}.locations")
@@ -55,7 +56,7 @@ def locations_temp():
     )
 
 
-@dp.materialized_view(
+@dp.table(
     name=f"{catalog}.{silver_schema}.locations",
     comment="Cleaned Air quality locations",
 )
@@ -64,7 +65,7 @@ def locations_temp():
     "name is not null": "name IS NOT NULL"
 })
 def locations():
-    locations_df = spark.read.table("locations_temp")
+    locations_df = spark.readStream.table("locations_temp")
     return (
         locations_df.select(
             col("id"),
@@ -93,7 +94,7 @@ def sensors_temp():
     )
 
 
-@dp.materialized_view(
+@dp.table(
     name=f"{catalog}.{silver_schema}.sensors",
     comment="Cleaned OpenAQ Sensor information",
 )
@@ -102,7 +103,7 @@ def sensors_temp():
 })
 def sensors():
     return (
-        spark.read.table("sensors_temp")
+        spark.readStream.table("sensors_temp")
             .select(
                 col("id").cast("int"),
                 col("name"),
@@ -111,7 +112,7 @@ def sensors():
     )
 
 
-@dp.materialized_view(
+@dp.table(
     name=f"{catalog}.{silver_schema}.parameters",
     comment="Cleaned OpenAQ Sensor Parameters information",
 )
@@ -121,12 +122,10 @@ def sensors():
 })
 def parameters():
     return (
-        spark.read.table("sensors_temp").select(
+        spark.readStream.table("sensors_temp").select(
             col("parameter.id").cast("int").alias("id"),
             col("parameter.displayName").alias("display_name"),
             col("parameter.name").alias("name"),
             col("parameter.units").alias("units")
         ).distinct()
     )
-
-
