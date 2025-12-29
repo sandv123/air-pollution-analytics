@@ -1,0 +1,48 @@
+# Load Belgrade historic polution data through OpenAQ API job
+resources:
+  jobs:
+    load_openaq_locations:
+      name: Load air quality locations through OpenAQ API
+
+      description: Job to run python script, calling OpenAQ API to extract the locations metadata
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: city
+          default: Belgrade
+        - name: latitude
+          default: "44.8125"
+        - name: longitude
+          default: "20.4612"
+      tasks:
+        - task_key: run_locations_load_script
+          environment_key: default
+          # disable_auto_optimization: true # This will disable automatic reties
+          max_retries: 10
+          min_retry_interval_millis: 60000
+          spark_python_task:
+            parameters:
+              - "--mode=locations"
+              - "--datastore_path"
+              - ${var.landing_datastore_path}/openaq/locations
+              - "--city"
+              - "{{job.parameters.city}}"
+              - "--latitude"
+              - "{{job.parameters.latitude}}"
+              - "--longitude"
+              - "{{job.parameters.longitude}}"
+            python_file: ../src/download_openaq_polution_data.py
+        - task_key: run_locations_etl_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.ingest-openaq-locations.id}
+            full_refresh: false
+          run_if: ALL_SUCCESS
+          depends_on:
+            - task_key: run_locations_load_script
+
+      environments:
+        - environment_key: default
+          spec:
+            dependencies:
+              - openaq
+            environment_version: "4"

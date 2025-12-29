@@ -1,7 +1,7 @@
 resources:
   pipelines:
     ingest-openaq-measurements:
-      name: Ingest and Clean OpenAQ Data
+      name: Ingest and Clean OpenAQ Measurements
       catalog: air_polution_analytics_dev
       schema: 01_bronze
       serverless: true
@@ -12,3 +12,15 @@ resources:
       libraries:
       -  glob:
           include: ../src/pipelines/ingest_openaq_measurements/transformations/**
+    ingest-openaq-locations:
+      name: Ingest and Clean OpenAQ Locations
+      catalog: air_polution_analytics_dev
+      schema: 01_bronze
+      serverless: true
+      channel: CURRENT
+      continuous: false
+      photon: true
+      root_path: ../src/pipelines/ingest_openaq_locations
+      libraries:
+      -  glob:
+          include: ../src/pipelines/ingest_openaq_locations/transformations/**
