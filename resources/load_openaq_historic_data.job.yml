@@ -63,6 +63,16 @@ resources:
           run_if: ALL_SUCCESS
           depends_on:
             - task_key: foreach_location
+        - task_key: dedup_measurements
+          environment_key: default
+          max_retries: 3
+          min_retry_interval_millis: 60000
+          run_if: ALL_SUCCESS
+          spark_python_task:
+            python_file: ../src/dedup_openaq_measurements.py
+          depends_on:
+            - task_key: run_measurements_etl_pipeline
+
       environments:
         - environment_key: default
           spec:
