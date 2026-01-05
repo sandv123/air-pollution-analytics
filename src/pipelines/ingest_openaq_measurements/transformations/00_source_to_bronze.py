@@ -7,8 +7,7 @@ bronze_schema = "01_bronze"
 
 base_path = f"/Volumes/{catalog}/{landing_schema}/openaq"
 measurements_path = f"{base_path}/measurements"
-locations_path = f"{base_path}/locations"
-metadata_path = f"{base_path}/_metadata"
+# archive_path = f"{measurements_path}/processed_files"
 
 @dp.table(
     name=f"{catalog}.{bronze_schema}.air_quality_measurements",
@@ -19,8 +18,11 @@ def raw_measurements():
         spark.readStream
         .format("cloudFiles")
         .option("multiline", "true")
-        .option("pathGlobfilter", "[0-9]*.json")
+        .option("pathGlobfilter", "[0-9]*.json.gz")
         .option("cloudFiles.format", "json")
+        # .option("cloudFiles.cleanSource", "MOVE")
+        # .option("cloudFiles.cleanSource.moveDestination", archive_path) 
+        # .option("cloudFiles.cleanSource.retentionDuration", "1 hour")
         .option("cloudFiles.inferColumnTypes", "true")
         .option("cloudFiles.schemaLocation", f"{measurements_path}/_schema")
         .option("cloudFiles.maxFilesPerTrigger", 1)
