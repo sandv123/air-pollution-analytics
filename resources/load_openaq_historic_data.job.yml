@@ -4,7 +4,7 @@ resources:
     load_openaq_data:
       name: Backfill historic OpenAQ air polution data
 
-      description: Job to run python script, calling OpenAQ API to extract the historic polution data for the past years
+      description: Download historic data from OpenAQ API, ingest and dedup the data
       max_concurrent_runs: 1
 
       parameters:
@@ -18,8 +18,6 @@ resources:
           default: 2021-01-01
         - name: date_to
           default: 2024-12-31
-        - name: period_weeks
-          default: "20"
 
       tasks:
         - task_key: list_openaq_locations
@@ -47,8 +45,6 @@ resources:
                   - "{{input.name}}"
                   - "--sensors"
                   - "{{input.sensor_id_arr}}"
-                  - "--period_weeks"
-                  - "{{job.parameters.period_weeks}}"
                   - "--date_from"
                   - "{{job.parameters.date_from}}"
                   - "--date_to"
@@ -56,23 +52,12 @@ resources:
                   - "--datastore_path"
                   - "/Volumes/air_polution_analytics_dev/00_landing/openaq/measurements/"
                 python_file: ../src/download_openaq_polution_data.py
-        - task_key: run_measurements_etl_pipeline
-          pipeline_task:
-            pipeline_id: ${resources.pipelines.ingest-openaq-measurements.id}
-            full_refresh: false
-          run_if: ALL_SUCCESS
+        - task_key: run_measurements_etl_pipeline_and_dedup
+          run_job_task:
+            job_id: ${resources.jobs.ingest_and_dedup_openaq_data.id}
           depends_on:
-            - task_key: foreach_location
-        - task_key: dedup_measurements
-          environment_key: default
-          max_retries: 3
-          min_retry_interval_millis: 60000
+          - task_key: foreach_location
           run_if: ALL_SUCCESS
-          spark_python_task:
-            python_file: ../src/dedup_openaq_measurements.py
-          depends_on:
-            - task_key: run_measurements_etl_pipeline
-
       environments:
         - environment_key: default
           spec:
