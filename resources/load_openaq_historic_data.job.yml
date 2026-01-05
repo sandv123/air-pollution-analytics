@@ -2,23 +2,67 @@
 resources:
   jobs:
     load_openaq_data:
-      name: Load Belgrade historic polution data through OpenAQ API
+      name: Backfill historic OpenAQ air polution data
 
-      description: Job to run python script, calling OpenAQ API to extract the Belgrade historic polution data for the past 5 years
+      description: Job to run python script, calling OpenAQ API to extract the historic polution data for the past years
       max_concurrent_runs: 1
 
-      tasks:
-        - task_key: run_data_load_script
-          environment_key: default
-          # disable_auto_optimization: true # This will disable automatic reties
-          max_retries: 10
-          min_retry_interval_millis: 60000
-          spark_python_task:
-            parameters:
-              - "--datastore_path"
-              - ${var.datastore_path}/openaq_historic
-            python_file: ../src/download_openaq_polution_data.py
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: 02_silver
+        - name: city
+          default: Belgrade
+        - name: date_from
+          default: 2021-01-01
+        - name: date_to
+          default: 2024-12-31
+        - name: period_weeks
+          default: "20"
 
+      tasks:
+        - task_key: list_openaq_locations
+          sql_task:
+            file:
+              path: ../sql/list_openaq_locations_by_city.sql
+            warehouse_id: ${var.warehouse_id}
+        - task_key: foreach_location
+          depends_on:
+          - task_key: list_openaq_locations
+          for_each_task:
+            inputs: "{{tasks.list_openaq_locations.output.rows}}"
+            task:
+              task_key: run_measurements_load_script
+              environment_key: default
+              max_retries: 3
+              min_retry_interval_millis: 60000
+              run_if: ALL_SUCCESS
+              spark_python_task:
+                parameters:
+                  - "--mode=measurements"
+                  - "--location_id"
+                  - "{{input.id}}"
+                  - "--location_name"
+                  - "{{input.name}}"
+                  - "--sensors"
+                  - "{{input.sensor_id_arr}}"
+                  - "--period_weeks"
+                  - "{{job.parameters.period_weeks}}"
+                  - "--date_from"
+                  - "{{job.parameters.date_from}}"
+                  - "--date_to"
+                  - "{{job.parameters.date_to}}"
+                  - "--datastore_path"
+                  - "/Volumes/air_polution_analytics_dev/00_landing/openaq/measurements/"
+                python_file: ../src/download_openaq_polution_data.py
+        - task_key: run_measurements_etl_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.ingest-openaq-measurements.id}
+            full_refresh: false
+          run_if: ALL_SUCCESS
+          depends_on:
+            - task_key: foreach_location
       environments:
         - environment_key: default
           spec:

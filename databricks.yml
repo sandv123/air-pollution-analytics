@@ -6,6 +6,10 @@ bundle:
   name: air_polution_analytics
 
 variables:
+  catalog:
+    default:
+  warehouse_id:
+    default:
   historic_datastore_path:
     default: /Volumes/air_polution_analytics_dev/historic_data/openaq_historic
   landing_datastore_path:
@@ -25,11 +29,7 @@ targets:
     workspace:
       host: https://dbc-b6c6205b-3d0e.cloud.databricks.com
     variables:
+      catalog: air_polution_analytics_dev
+      warehouse_id: 0bd1db16ba827ac7
       historic_datastore_path: /Volumes/air_polution_analytics_dev/historic_data/openaq_historic
       landing_datastore_path: /Volumes/air_polution_analytics_dev/00_landing
-
-  ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
-  # prod:
-  #   workspace:
-  #     host: https://dbc-b6c6205b-3d0e.cloud.databricks.com
