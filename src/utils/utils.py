@@ -83,7 +83,6 @@ def setup_environment(dbutils) -> dict[str, Any]:
     argparse.add_argument("--sensors", nargs="+")
     argparse.add_argument("--date_from", type=str)
     argparse.add_argument("--date_to", type=str)
-    argparse.add_argument("--period_weeks", type=int)
 
     # Common args
     argparse.add_argument("--datastore_path", type=str)
@@ -91,6 +90,9 @@ def setup_environment(dbutils) -> dict[str, Any]:
     args = argparse.parse_args()
 
     result = args.__dict__
+
+    if result.get("date_to") is None:
+        result["date_to"] = datetime.today().strftime('%Y-%m-%d')
 
     sensors = str(result.get("sensors"))
     if sensors and sensors[0].startswith("["):
@@ -123,7 +125,7 @@ def store_file(datastore:str, filename: str, data: str, compression: str = "gzip
         f.write(content_to_store.getvalue())
 
 
-def split_time_period(date_from_str: str, date_to_str: str, period_weeks: int) -> list[tuple[str, str]]:
+def split_time_period(date_from_str: str, date_to_str: str) -> list[tuple[str, str]]:
     date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
     date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
 
@@ -159,5 +161,5 @@ if __name__ == "__main__":
         dbutils = None
     config = setup_environment(dbutils)
 
-    for p in split_time_period(config["date_from"], config["date_to"], 1):
+    for p in split_time_period(config["date_from"], config["date_to"]):
         print(p)

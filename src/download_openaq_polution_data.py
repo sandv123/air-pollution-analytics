@@ -162,7 +162,7 @@ def retrieve_single_location_measurements(config: dict[str, Any], connection_mgr
     date_from = config["date_from"]
     date_to = config["date_to"]
 
-    periods = utils.split_time_period(date_from, date_to, config["period_weeks"])
+    periods = utils.split_time_period(date_from, date_to)
     # print(f'periods={periods}')
     for (sensor, date) in product(config["sensors"], periods):
         # print(f"  sensor {sensor}, date={date}")
@@ -201,12 +201,10 @@ if __name__ == "__main__":
         if (not config.get("location_id") 
             or not config.get("location_name") 
             or not config.get("sensors")
-            or not config.get("period_weeks")
             or not config.get("date_from")
-            or not config.get("date_to")
             or not config.get("datastore_path")
         ):
-            raise ValueError("Parameters are required: location_id, period_weeks, date_from, date_to, longitude, datastore_path")
+            raise ValueError("Parameters are required: location_id, date_from, longitude, datastore_path")
         retrieve_single_location_measurements(config, connection_mgr)
     elif config["mode"] == "locations":
         if not config.get("city") or not config.get("latitude") or not config.get("longitude") or not config.get("datastore_path"):
