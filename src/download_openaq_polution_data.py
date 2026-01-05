@@ -4,6 +4,7 @@ import os
 import time
 from typing import Any
 import httpcore
+import httpx 
 import openaq
 import zipfile
 from itertools import product
@@ -51,7 +52,7 @@ def call_openaq_api(client: openaq.OpenAQ, sensor_id: int, date_from: str, date_
             limit=limit, 
             page=page_num
         )
-        # print(f'  page={page_num} len={len(measurements.results)}', measurements.headers)
+        print(f'    page={page_num} len={len(measurements.results)}', measurements.headers)
         
         # Pages are retrieved until current page returns zero results
         if not len(measurements.results) == 0:
@@ -70,9 +71,9 @@ def call_openaq_api(client: openaq.OpenAQ, sensor_id: int, date_from: str, date_
                 sleep_seconds = 60
             else:
                 sleep_seconds = float(measurements.headers.x_ratelimit_reset)
-        # print(f'TIMED OUT, sleeping {sleep_seconds} seconds, retry page {page_num}')
+        print(f'TIMED OUT, sleeping {sleep_seconds} seconds, retry page {page_num}')
 
-        raise TimeoutErrorExt(e, sleep_seconds)
+        raise utils.TimeoutErrorExt(e, sleep_seconds)
 
     return result
 
@@ -87,12 +88,13 @@ def check_processed_chunk(datastore: str, name: str, tag: str) -> bool:
     return os.path.exists(datastore + f'{name}.{tag}')
 
 
-def download_chunk(config, connection_mgr, locationid, sensorid, date_from, date_to):
+def download_chunk(config, connection_mgr, locationid, location_name, sensorid, date_from, date_to):
     client = connection_mgr.get_client()
 
-    chunk_name = f'{locationid}_{sensorid}_{date_from}_{date_to}'
+    location_name = location_name.replace(' ', '-')
+    chunk_name = f'{locationid}_{sensorid}_{location_name}_{date_from}_{date_to}'
     print(f'  Downloading chunk {chunk_name}')
-    if check_processed_chunk(config["datastore"], chunk_name, 'finished'):
+    if check_processed_chunk(config["datastore_path"], chunk_name, 'finished'):
         print(f'  Chunk {chunk_name} already downloaded, skipping')
         return
     
@@ -103,28 +105,30 @@ def download_chunk(config, connection_mgr, locationid, sensorid, date_from, date
         filename = f'{chunk_name}_page{page_num}.json'
 
         # If a page has already been downloaded, skip it
-        if os.path.exists(config["datastore"] + filename + '.zip'):
-            print(f'    Page {filename}.zip exists, skipping')
+        if utils.file_downloaded(config, filename):
+            print(f'    Page {filename} exists, skipping')
             continue
 
         try:
             page = call_openaq_api(client, sensorid, date_from, date_to, page_num)
+            
+            # Reset timeout count after a successful API call
             timed_out = 0
             if not page:
                 break
 
-            # Store the data in zipped format. This shrinks the files about 50 times
-            utils.store_zipped(config["datastore"], filename, json.dumps(page, indent=4))
+            # Store the data in gzipped format. This shrinks the files about 50 times
+            utils.store_file(config["datastore_path"], filename, json.dumps(page, indent=4), compression="gzip")
         except utils.TimeoutErrorExt as e:
             if timed_out == 3:
                 print(f'  Timed out (API) 3 times, skipping page {filename}')
-                mark_processed_chunk(config["datastore"], filename, 'skipped_page')
+                mark_processed_chunk(config["datastore_path"], filename, 'skipped_page')
                 client = connection_mgr.recycle_client(0)
                 timed_out += 1
                 continue
             if timed_out == 5:
                 print(f'  Timed out (API) 5 times, skipping chunk {chunk_name}')
-                mark_processed_chunk(config["datastore"], filename, 'skipped_chunk')
+                mark_processed_chunk(config["datastore_path"], filename, 'skipped_chunk')
                 client = connection_mgr.recycle_client(0)
                 timed_out += 1
                 break
@@ -133,12 +137,16 @@ def download_chunk(config, connection_mgr, locationid, sensorid, date_from, date
                 print('  Timed out (API) 7 times, canceling')
                 raise e
             else:
-                # If the API timed out, try resetting the connection and wait for the API suggested amount of seconds
+                # If the API timed out, try resetting the connection and wait for the API-suggested amount of seconds and some
                 time_to_sleep = e.timeout_seconds + 60 * timed_out
                 print(f'TIMED OUT OPENAQ, sleeping for {time_to_sleep} seconds, {e}')
                 timed_out += 1
                 client = connection_mgr.recycle_client(time_to_sleep)
                 page_num -= 1
+        except httpx.TimeoutException as e:
+            print(f'TIMED OUT HTTP, sleeping for 60 seconds, {e}')
+            client = connection_mgr.recycle_client(60)
+            page_num -= 1
         except httpcore.ReadTimeout as e:
             print(f'TIMED OUT HTTP READ, sleeping for 60 seconds, {e}')
             client = connection_mgr.recycle_client(60)
@@ -147,56 +155,24 @@ def download_chunk(config, connection_mgr, locationid, sensorid, date_from, date
             print(f'TIMED OUT NETWORK/IO, sleeping for 60 seconds, {e}')
             client = connection_mgr.recycle_client(60)
             page_num -= 1
-    mark_processed_chunk(config["datastore"], chunk_name, 'finished')
+    mark_processed_chunk(config["datastore_path"], chunk_name, 'finished')
 
 
-def retrieve_historic_data(config: dict[str, Any], connection_mgr: utils.OpenAQConnectionManager):
-    coordinates: dict[str, tuple[float, float]] = config["coordinates"]
-
-    city = config['city']
-    # Retrieve data for these years to analyze
-    years = config["backfill_years"]
-
-    # Retrieve measurements for these parameters of the sensors
-    parameters = config["parameters"]
-
-    for l in locations.results:
-        location_name = l.name.replace(' ', '-')
-
-        # For current location find the ids of the sensors that provide measurements for parameters we are interested in
-        # If no sensor measures interesting parameter, skip the parameter
-        sensors_parameters = {s.parameter.name: s.id  for s in l.sensors}
-        sensor_ids = filter(lambda f: f != 0, map(lambda x: sensors_parameters.get(x, 0), parameters))
-        print(f'Downloading measurements for location {location_name}')
-        
-        for year_and_sensor in product(years, sensor_ids):
-            download_chunk(config,
-                           connection_mgr,
-                           l.id,
-                           year_and_sensor[1],
-                           f"{year_and_sensor[0]}-01-01",
-                           f"{year_and_sensor[0]}-12-31")
-
-
-def retrieve_recent_data(config: dict[str,Any], connection_mgr: utils.OpenAQConnectionManager):
-    coordinates: tuple[float, float] = (config["latitude"], config["longitude"])
-
+def retrieve_single_location_measurements(config: dict[str, Any], connection_mgr: utils.OpenAQConnectionManager):
     date_from = config["date_from"]
     date_to = config["date_to"]
 
-    # Retrieve measurements for these parameters of the sensors
-    parameters = config["parameters"]
-
-    for s in config["locations_sensors"]:
-        locationid, sensorid = s.split("_")
-        print(f"Downloading data for location {locationid} sensor {sensorid}, from {date_from} to {date_to}")
-        
+    periods = utils.split_time_period(date_from, date_to, config["period_weeks"])
+    # print(f'periods={periods}')
+    for (sensor, date) in product(config["sensors"], periods):
+        # print(f"  sensor {sensor}, date={date}")
         download_chunk(config,
-                       connection_mgr,
-                       locationid,
-                       sensorid,
-                       date_from,
-                       date_to)
+                        connection_mgr,
+                        config["location_id"],
+                        config["location_name"],
+                        sensor,
+                        date[0],
+                        date[1])
 
 
 def retrieve_locations(config: dict[str,Any], connection_mgr: utils.OpenAQConnectionManager):
@@ -220,16 +196,21 @@ if __name__ == "__main__":
         dbutils = None
     config = utils.setup_environment(dbutils) # type: ignore
 
-    print(config)
-
     connection_mgr = utils.OpenAQConnectionManager(config["api_key"])
-    if config["mode"] =="backfill":
-        if not config.get("city") or not config.get("latitude") or not config.get("longitude") or not config.get("datastore_path"):
-            raise ValueError("Parameters are required: city, latitude, longitude, datastore_path")
-        retrieve_historic_data(config, connection_mgr)
+    if config["mode"] =="measurements":
+        if (not config.get("location_id") 
+            or not config.get("location_name") 
+            or not config.get("sensors")
+            or not config.get("period_weeks")
+            or not config.get("date_from")
+            or not config.get("date_to")
+            or not config.get("datastore_path")
+        ):
+            raise ValueError("Parameters are required: location_id, period_weeks, date_from, date_to, longitude, datastore_path")
+        retrieve_single_location_measurements(config, connection_mgr)
     elif config["mode"] == "locations":
         if not config.get("city") or not config.get("latitude") or not config.get("longitude") or not config.get("datastore_path"):
             raise ValueError("Parameters are required: city, latitude, longitude, datastore_path")
         retrieve_locations(config, connection_mgr)
     else:
-        retrieve_recent_data(config, connection_mgr)
+        print(f"config={config}")

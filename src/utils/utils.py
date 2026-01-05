@@ -1,3 +1,5 @@
+import glob
+import json
 import os
 from argparse import ArgumentParser
 from typing import Any
@@ -5,6 +7,7 @@ from typing import Any
 import io
 import openaq
 import time
+from datetime import datetime, timedelta, date
 
 
 
@@ -59,7 +62,6 @@ def is_running_in_databricks() -> bool:
 
 def setup_environment(dbutils) -> dict[str, Any]:
     # OpenAQ API key
-    # if is_running_in_databricks():
     if dbutils is not None:
         print("Running inside Databricks")
         api_key = dbutils.secrets.get(scope = "air-polution-analytics APIs keys", key = "OPENAQ_API_KEY") # type: ignore
@@ -68,34 +70,39 @@ def setup_environment(dbutils) -> dict[str, Any]:
         api_key = os.environ['OPENAQ_API_KEY']
         
     argparse = ArgumentParser()
-    argparse.add_argument("--mode", choices=['locations', 'backfill', 'iterative'], required=True)
+    argparse.add_argument("--mode", choices=['locations', 'measurements', 'test'], required=True)
 
     # Mode=locations
     argparse.add_argument("--latitude", type=float)
     argparse.add_argument("--longitude", type=float)
     argparse.add_argument("--city",  type=str)
 
-    # Mode=backfill
-    argparse.add_argument("--backfill_years", nargs="+")
-    
-    # Mode=iterative & common args
-    argparse.add_argument("--location", type=int)
+    # Mode=measurements
+    argparse.add_argument("--location_id", type=int)
     argparse.add_argument("--location_name", type=str)
     argparse.add_argument("--sensors", nargs="+")
     argparse.add_argument("--date_from", type=str)
     argparse.add_argument("--date_to", type=str)
+    argparse.add_argument("--period_weeks", type=int)
+
+    # Common args
     argparse.add_argument("--datastore_path", type=str)
 
     args = argparse.parse_args()
 
     result = args.__dict__
+
+    sensors = str(result.get("sensors"))
+    if sensors and sensors[0].startswith("["):
+        result["sensors"] = ["".join(filter(str.isnumeric, s)) for s in sensors[1:-1].split(",")]
+
     result["parameters"] = ['pm1', 'pm10', 'pm25', 'temperature']
     result["api_key"] = api_key
 
     return result
 
 
-def store_file(datastore:str, filename: str, data: str, compression: str = "zip"):
+def store_file(datastore:str, filename: str, data: str, compression: str = "gzip"):
     content_to_store: io.BytesIO
     if compression == "zip":
         import zipfile
@@ -116,5 +123,35 @@ def store_file(datastore:str, filename: str, data: str, compression: str = "zip"
         f.write(content_to_store.getvalue())
 
 
+def split_time_period(date_from_str: str, date_to_str: str, period_weeks: int) -> list[tuple[str, str]]:
+    date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+    date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+
+    thresholds = (
+        (3, 31),
+        (6, 30),
+        (9, 30),
+        (12, 31)
+    )
+    from itertools import product, pairwise
+    periods = [date_from - timedelta(days=1)]
+    for date_str in product(range(date_from.year, date_to.year+1), thresholds):
+        threshold_date = date(date_str[0], date_str[1][0], date_str[1][1])
+        if(threshold_date <= date_from):
+            continue
+        if(threshold_date > date_to):
+            break
+        periods.append(threshold_date)
+    periods.append(date_to)
+
+    result = [((left + timedelta(days=1)).strftime('%Y-%m-%d'), right.strftime('%Y-%m-%d')) for left, right in pairwise(periods)]
+    return result
+
+
+def file_downloaded(config, filename):
+    filename = config["datastore_path"] + filename 
+    return os.path.exists(filename) or os.path.exists(filename+ '.zip') or os.path.exists(filename+ '.gz')
+
+
 if __name__ == "__main__":
-    pass
+    print(split_time_period("2021-02-04", "2021-03-05", 1))
