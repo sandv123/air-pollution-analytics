@@ -8,7 +8,7 @@ silver_schema = "02_silver"
 
 
 @dp.table(
-    name=f"{catalog}.{silver_schema}.air_quality_measurements",
+    name=f"{catalog}.{silver_schema}.openaq_measurements",
     comment="Cleaned OpenAQ Air quality measurements"
     # Databricks recommends to avoid partitioning tables less that 1Tb in size,
     # thus no partitioning is enabled
@@ -22,7 +22,7 @@ silver_schema = "02_silver"
 })
 def compute_air_quality_measurements_silver():
     df = (
-        spark.readStream.table(f"{catalog}.{bronze_schema}.air_quality_measurements")
+        spark.readStream.table(f"{catalog}.{bronze_schema}.openaq_measurements")
             .select(col("results.period.datetimeFrom.utc").alias("datetime_from"),
                     col("results.period.datetimeTo.utc").alias("datetime_to"),
                     col("results.value").alias("value").cast("float"),

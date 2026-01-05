@@ -10,7 +10,7 @@ measurements_path = f"{base_path}/measurements"
 # archive_path = f"{measurements_path}/processed_files"
 
 @dp.table(
-    name=f"{catalog}.{bronze_schema}.air_quality_measurements",
+    name=f"{catalog}.{bronze_schema}.openaq_measurements",
     comment="Ingested raw OpenAQ measurements data"
 )
 def raw_measurements():
