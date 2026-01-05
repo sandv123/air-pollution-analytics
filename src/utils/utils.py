@@ -142,7 +142,8 @@ def split_time_period(date_from_str: str, date_to_str: str, period_weeks: int) -
         if(threshold_date > date_to):
             break
         periods.append(threshold_date)
-    periods.append(date_to)
+    if(periods[-1] != date_to):
+        periods.append(date_to)
 
     result = [((left + timedelta(days=1)).strftime('%Y-%m-%d'), right.strftime('%Y-%m-%d')) for left, right in pairwise(periods)]
     return result
@@ -154,4 +155,9 @@ def file_downloaded(config, filename):
 
 
 if __name__ == "__main__":
-    print(split_time_period("2021-02-04", "2021-03-05", 1))
+    if not is_running_in_databricks():
+        dbutils = None
+    config = setup_environment(dbutils)
+
+    for p in split_time_period(config["date_from"], config["date_to"], 1):
+        print(p)
