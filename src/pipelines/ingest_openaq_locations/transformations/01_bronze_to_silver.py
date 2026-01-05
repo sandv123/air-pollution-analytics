@@ -9,18 +9,24 @@ silver_schema = "02_silver"
 @dp.temporary_view
 def locations_temp():
     locations_df = spark.readStream.table(f"{catalog}.{bronze_schema}.openaq_locations")
+
+    split_col = split(locations_df.source_file_name, "-")
     return (
-        locations_df.select(
-                    col("results.id").alias("id").cast("int"),
-                    col("results.name").alias("name"),
-                    col("results.locality").alias("locality"),
-                    col("results.country.code").alias("country"),
-                    col("results.isMobile").alias("is_mobile"),
-                    col("results.isMonitor").alias("is_monitor"),
-                    col("results.coordinates.latitude").alias("latitude").cast("float"),
-                    col("results.coordinates.longitude").alias("longitude").cast("float"),
-                    col("results.sensors").alias("sensors")
-        )       
+        locations_df
+            .select(
+                col("results.id").alias("id").cast("int"),
+                col("results.name").alias("name"),
+                col("results.locality").alias("locality"),
+                col("results.country.code").alias("country"),
+                col("results.isMobile").alias("is_mobile"),
+                col("results.isMonitor").alias("is_monitor"),
+                col("results.coordinates.latitude").alias("latitude").cast("float"),
+                col("results.coordinates.longitude").alias("longitude").cast("float"),
+                col("results.sensors").alias("sensors"),
+                col("source_file_name")
+            )
+            .withColumn("city", split_col.getItem(0))
+            .drop(col("source_file_name"))
     )
 
 
@@ -30,7 +36,8 @@ def locations_temp():
 )
 @dp.expect_all_or_drop({
     "id is not null": "id IS NOT NULL",
-    "name is not null": "name IS NOT NULL"
+    "name is not null": "name IS NOT NULL",
+    "city is not null": "city IS NOT NULL"
 })
 def locations():
     locations_df = spark.readStream.table("locations_temp")
@@ -40,6 +47,7 @@ def locations():
             col("name"),
             col("locality"),
             col("country"),
+            col("city"),
             col("is_mobile"),
             col("is_monitor"),
             col("latitude"),
