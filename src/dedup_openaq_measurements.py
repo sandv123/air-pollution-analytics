@@ -10,12 +10,12 @@ target_table = "openaq_measurements_deduped"
 base_path = f"/Volumes/{catalog}/{silver_schema}/metadata"
 openaq_path = f"{base_path}/openaq"
 
-create_table = f"create table if not exists {target_table} (id STRING, datetime_from TIMESTAMP, value FLOAT, location_id INT, sensor_id INT);"
+create_table = f"create table if not exists {catalog}.{silver_schema}.{target_table} (id STRING, datetime_from TIMESTAMP, value FLOAT, location_id INT, sensor_id INT);"
 create_volume = f"create volume if not exists {catalog}.{silver_schema}.metadata;"
-dbutils.fs.mkdirs(openaq_path)
 
 spark.sql(create_table)
 spark.sql(create_volume)
+dbutils.fs.mkdirs(openaq_path)
 
 def upsertToDelta(microBatchOutputDF, batchId):
     tableDeduped = DeltaTable.forName(spark, f"{catalog}.{silver_schema}.{target_table}")
@@ -25,9 +25,6 @@ def upsertToDelta(microBatchOutputDF, batchId):
     .whenNotMatchedInsertAll()
     .execute()
     )
-
-    
-split_col = split(col("source_file_name"), "_")
     
 df = (spark.readStream
     .table(f"{catalog}.{silver_schema}.{source_table}")
