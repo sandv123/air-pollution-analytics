@@ -6,6 +6,17 @@ resources:
       description: Run OpenAQ ingestion pipeline and deduplicate data
       max_concurrent_runs: 1
 
+      parameters:
+        - name: catalog
+          default: air_polution_analytics_dev
+        - name: landing_schema
+          default: 00_landing
+        - name: bronze_schema
+          default: 01_bronze
+        - name: silver_schema
+          default: 02_silver
+
+
       tasks:        
         - task_key: run_measurements_etl_pipeline
           pipeline_task:
@@ -16,8 +27,6 @@ resources:
           max_retries: 1
           min_retry_interval_millis: 60000
           run_if: ALL_SUCCESS
-          # spark_python_task:
-          #   python_file: ../src/dedup_openaq_measurements.py
           notebook_task:
             notebook_path: ../notebooks/dedup_openaq_measurements.ipynb
             source: WORKSPACE
