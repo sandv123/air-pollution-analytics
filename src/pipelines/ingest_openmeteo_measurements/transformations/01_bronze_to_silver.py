@@ -3,15 +3,15 @@ from pyspark import pipelines as dp # type: ignore
 from pyspark.sql.functions import col, sha2, concat_ws, to_timestamp, split
 
 catalog = "air_polution_analytics_dev"
-bronze_schema = "01_bronze"
-silver_schema = "02_silver"
+source_schema = "01_bronze"
+target_schema = "01_bronze"
 
 
 # In future same logic might be used for locations other than Belgrade, RS
 # Thus generating a location ID I can use to store the data
 @dp.temporary_view
 def openmeteo_temp():
-    df = spark.readStream.table(f"{catalog}.{bronze_schema}.temperature_measurements")
+    df = spark.readStream.table(f"{catalog}.{source_schema}.temperature_measurements_raw")
 
     split_col = split(df.source_file_name, "_")
     return (
@@ -33,7 +33,7 @@ def openmeteo_temp():
 
 
 @dp.table(
-    name = f"{catalog}.{silver_schema}.temperature_measurements",
+    name = f"{catalog}.{target_schema}.temperature_measurements",
     comment = "Open-meteo Temperature Measurements"
 )
 @dp.expect_all_or_drop({

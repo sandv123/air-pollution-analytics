@@ -11,7 +11,7 @@ metadata_path = f"{base_path}/_metadata"
 
 
 @dp.table(
-    name=f"{catalog}.{bronze_schema}.temperature_measurements",
+    name=f"{catalog}.{bronze_schema}.temperature_measurements_raw",
     comment="Ingested raw open-meteo measurements data"
 )
 def temperature_measurements():

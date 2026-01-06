@@ -19,7 +19,7 @@ using (
     split(source_file_name, "_")[1] as city,
     timezone,
     elevation
-  from air_polution_analytics_dev.`01_bronze`.temperature_measurements
+  from air_polution_analytics_dev.`01_bronze`.temperature_measurements_raw
 ) as source
 on target.location_id = source.location_id
 when not matched then insert *

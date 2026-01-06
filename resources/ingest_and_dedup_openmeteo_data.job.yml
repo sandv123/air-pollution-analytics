@@ -17,6 +17,8 @@ resources:
           default: air_polution_analytics_dev
         - name: landing_schema
           default: 00_landing
+        - name: bronze_schema
+          default: 01_bronze
         - name: silver_schema
           default: 02_silver
 
