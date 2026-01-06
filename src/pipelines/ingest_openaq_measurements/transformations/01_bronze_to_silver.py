@@ -3,12 +3,12 @@ from pyspark import pipelines as dp # type: ignore
 from pyspark.sql.functions import col, split, collect_set
 
 catalog = "air_polution_analytics_dev"
-bronze_schema = "01_bronze"
-silver_schema = "02_silver"
+source_schema = "01_bronze"
+target_schema = "01_bronze"
 
 
 @dp.table(
-    name=f"{catalog}.{silver_schema}.openaq_measurements",
+    name=f"{catalog}.{target_schema}.openaq_measurements",
     comment="Cleaned OpenAQ Air quality measurements"
     # Databricks recommends to avoid partitioning tables less that 1Tb in size,
     # thus no partitioning is enabled
@@ -22,7 +22,7 @@ silver_schema = "02_silver"
 })
 def compute_air_quality_measurements_silver():
     df = (
-        spark.readStream.table(f"{catalog}.{bronze_schema}.openaq_measurements")
+        spark.readStream.table(f"{catalog}.{source_schema}.openaq_measurements_raw")
             .select(col("results.period.datetimeFrom.utc").alias("datetime_from"),
                     col("results.period.datetimeTo.utc").alias("datetime_to"),
                     col("results.value").alias("value").cast("float"),
