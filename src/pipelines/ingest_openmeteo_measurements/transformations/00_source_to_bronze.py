@@ -19,7 +19,7 @@ def temperature_measurements():
         .format("cloudFiles")
         .option("multiline", "true")
         .option("cloudFiles.format", "json")
-        .option("pathGlobfilter", "open-meteo*.json")
+        .option("pathGlobfilter", "openmeteo*.json.gz")
         .option("cloudFiles.inferColumnTypes", "true")
         .option("cloudFiles.schemaLocation", f"{measurements_path}/_schema")
         .option("cloudFiles.maxFilesPerTrigger", 1)
