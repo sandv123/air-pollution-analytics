@@ -16,8 +16,11 @@ resources:
           max_retries: 1
           min_retry_interval_millis: 60000
           run_if: ALL_SUCCESS
-          spark_python_task:
-            python_file: ../src/dedup_openaq_measurements.py
+          # spark_python_task:
+          #   python_file: ../src/dedup_openaq_measurements.py
+          notebook_task:
+            notebook_path: ../notebooks/dedup_openaq_measurements.ipynb
+            source: WORKSPACE
           depends_on:
             - task_key: run_measurements_etl_pipeline
 
