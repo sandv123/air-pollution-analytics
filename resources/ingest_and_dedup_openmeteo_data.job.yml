@@ -1,0 +1,46 @@
+resources:
+  jobs:
+    ingest_and_dedup_openmeteo_data:
+      name: Run openmeteo ingestion pipeline and dedup data
+
+      description: Run openmeteo ingestion pipeline and deduplicate data
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: city
+          default: Belgrade
+        - name: latitude
+          default: "44.8125"
+        - name: longitude
+          default: "20.4612"
+        - name: catalog
+          default: air_polution_analytics_dev
+        - name: landing_schema
+          default: 00_landing
+        - name: silver_schema
+          default: 02_silver
+
+      tasks:        
+        - task_key: run_measurements_etl_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.ingest-openmeteo-measurements.id}
+            full_refresh: false
+        - task_key: dedup_measurements
+          environment_key: default
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          run_if: ALL_SUCCESS
+          # spark_python_task:
+          #   python_file: ../src/dedup_openmeteo_measurements.py
+          notebook_task:
+            notebook_path: ../notebooks/dedup_openmeteo_measurements.ipynb
+            source: WORKSPACE
+          depends_on:
+            - task_key: run_measurements_etl_pipeline
+
+      environments:
+      - environment_key: default
+        spec:
+          dependencies:
+            - openaq
+          environment_version: "4"

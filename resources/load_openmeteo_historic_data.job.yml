@@ -1,0 +1,62 @@
+resources:
+  jobs:
+    load_openmeteo_data:
+      name: Backfill historic openmeteo temperature data
+
+      description: Download historic data from openmeteo API, ingest and dedup the data
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: 02_silver
+        - name: city
+          default: Belgrade
+        - name: date_from
+          default: 2021-01-01
+        - name: date_to
+          default: 2025-08-31
+        - name: latitude
+          default: "44.8125"
+        - name: longitude
+          default: "20.4612"
+
+      tasks:
+        - task_key: run_openmeteo_data_load_script
+          environment_key: default
+          # disable_auto_optimization: true # This will disable automatic reties
+          max_retries: 10
+          min_retry_interval_millis: 60000
+          spark_python_task:
+            parameters:
+              - "--datastore_path"
+              - ${var.landing_datastore_path}/openmeteo/measurements
+              - "--city"
+              - "{{job.parameters.city}}"
+              - "--latitude"
+              - "{{job.parameters.latitude}}"
+              - "--longitude"
+              - "{{job.parameters.longitude}}"
+              - "--date_from"
+              - "{{job.parameters.date_from}}"
+              - "--date_to"
+              - "{{job.parameters.date_to}}"
+            python_file: ../src/download_openmeteo_data.py
+        - task_key: run_measurements_etl_pipeline_and_dedup
+          run_job_task:
+            job_id: ${resources.jobs.ingest_and_dedup_openmeteo_data.id}
+          depends_on:
+          - task_key: run_openmeteo_data_load_script
+          run_if: ALL_SUCCESS
+        - task_key: populate_locations
+          run_job_task:
+            job_id: ${resources.jobs.load_openmeteo_locations.id}
+          depends_on:
+          - task_key: run_measurements_etl_pipeline_and_dedup
+      environments:
+        - environment_key: default
+          spec:
+            dependencies:
+              - openaq
+            environment_version: "4"

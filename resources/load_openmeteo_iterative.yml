@@ -1,0 +1,57 @@
+resources:
+  jobs:
+    load_openmeteo_iterative:
+      name: Ingest newest openmeteo temperature data
+
+      description: Download newest data from openmeteo API, ingest and dedup the data
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: 02_silver
+        - name: city
+          default: Belgrade
+        
+      tasks:
+        - task_key: find_last_ingested_openmeteo_date_by_location
+          sql_task:
+            file:
+              path: ../sql/find_last_ingested_date_by_location_openmeteo.sql
+            warehouse_id: ${var.warehouse_id}
+        - task_key: foreach_location
+          depends_on:
+          - task_key: find_last_ingested_openmeteo_date_by_location
+          for_each_task:
+            inputs: "{{tasks.find_last_ingested_openmeteo_date_by_location.output.rows}}"
+            task:
+              task_key: run_measurements_load_script
+              environment_key: default
+              max_retries: 3
+              min_retry_interval_millis: 60000
+              run_if: ALL_SUCCESS
+              spark_python_task:
+                parameters:
+                  - "--city"
+                  - "{{input.city}}"
+                  - "--date_from"
+                  - "{{input.last_date}}"
+                  - "--latitude"
+                  - "{{input.latitude}}"
+                  - "--longitude"
+                  - "{{input.longitude}}"
+                  - "--datastore_path"
+                  - "/Volumes/air_polution_analytics_dev/00_landing/openmeteo/measurements/"
+                python_file: ../src/download_openmeteo_data.py
+        - task_key: run_measurements_etl_pipeline_and_dedup
+          run_job_task:
+            job_id: ${resources.jobs.ingest_and_dedup_openmeteo_data.id}
+          depends_on:
+          - task_key: foreach_location
+          run_if: ALL_SUCCESS
+      environments:
+        - environment_key: default
+          spec:
+            dependencies:
+              - openaq
+            environment_version: "4"
