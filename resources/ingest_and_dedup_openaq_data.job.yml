@@ -13,7 +13,7 @@ resources:
             full_refresh: false
         - task_key: dedup_measurements
           environment_key: default
-          max_retries: 3
+          max_retries: 1
           min_retry_interval_millis: 60000
           run_if: ALL_SUCCESS
           spark_python_task:

@@ -1,0 +1,25 @@
+resources:
+  jobs:
+    load_openmeteo_locations:
+      name: Polulate openmeteo locations
+
+      description: Polulate openmeteo locations from raw data in bronze temperature_measurements
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: 02_silver
+        
+      tasks:
+        - task_key: populate_openmeteo_locations
+          sql_task:
+            file:
+              path: ../sql/populate_openmeteo_locations.sql
+            warehouse_id: ${var.warehouse_id}
+      environments:
+        - environment_key: default
+          spec:
+            dependencies:
+              - openaq
+            environment_version: "4"

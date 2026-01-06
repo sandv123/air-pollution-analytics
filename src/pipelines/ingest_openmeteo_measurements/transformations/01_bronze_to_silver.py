@@ -33,42 +33,15 @@ def openmeteo_temp():
 
 
 @dp.table(
-    name = f"{catalog}.{silver_schema}.temperature_locations",
-    comment = "Open-meteo Locations Information"
-)
-@dp.expect_all_or_drop({
-                        "location_id is not null": "location_id is not null",
-                        "city is not null": "city IS NOT NULL",
-                        "latitude is not null": "latitude IS NOT NULL",
-                        "longitude is not null": "longitude IS NOT NULL"
-})
-def temperature_locations():
-    df = spark.readStream.table("openmeteo_temp")
-    return (
-        df.select(
-            "location_id",
-            "city",
-            "elevation",
-            "generationtime_ms",
-            "hourly_units",
-            "latitude",
-            "longitude",
-            "timezone",
-            "timezone_abbreviation",
-            "utc_offset_seconds")
-    )
-
-
-@dp.table(
     name = f"{catalog}.{silver_schema}.temperature_measurements",
     comment = "Open-meteo Temperature Measurements"
 )
 @dp.expect_all_or_drop({
-                        "location_id is not null": "location_id is not null"
-                        "datetime is not null": "datetime is not null",
-                        "temperature_2m is not null": "temperature_2m IS NOT NULL",
-                        "surface_pressure is not null": "surface_pressure IS NOT NULL"
-})
+                         "location_id is not null": "location_id is not null",
+                         "datetime is not null": "datetime is not null",
+                         "temperature_2m is not null": "temperature_2m IS NOT NULL",
+                         "surface_pressure is not null": "surface_pressure IS NOT NULL"
+ })
 def temperature_measurements():
     df = spark.readStream.table("openmeteo_temp")
     return (

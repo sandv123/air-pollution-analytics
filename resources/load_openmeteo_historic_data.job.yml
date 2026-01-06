@@ -49,6 +49,11 @@ resources:
           depends_on:
           - task_key: run_openmeteo_data_load_script
           run_if: ALL_SUCCESS
+        - task_key: populate_locations
+          run_job_task:
+            job_id: ${resources.jobs.load_openmeteo_locations.id}
+          depends_on:
+          - task_key: run_measurements_etl_pipeline_and_dedup
       environments:
         - environment_key: default
           spec:
