@@ -70,7 +70,7 @@ def setup_environment(dbutils) -> dict[str, Any]:
         api_key = os.environ['OPENAQ_API_KEY']
         
     argparse = ArgumentParser()
-    argparse.add_argument("--mode", choices=['locations', 'measurements', 'test'], required=True)
+    argparse.add_argument("--mode", choices=['locations', 'measurements', 'test'], default='test')
 
     # Mode=locations
     argparse.add_argument("--latitude", type=float)
