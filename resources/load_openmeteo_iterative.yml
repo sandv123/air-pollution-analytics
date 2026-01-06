@@ -13,6 +13,10 @@ resources:
         - name: city
           default: Belgrade
         
+      schedule:
+        quartz_cron_expression: "00 00 23 * * ? *"
+        timezone_id: "CET"
+
       tasks:
         - task_key: find_last_ingested_openmeteo_date_by_location
           sql_task:
