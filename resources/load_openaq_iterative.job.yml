@@ -14,6 +14,7 @@ resources:
           default: Belgrade
         
       schedule:
+        pause_status: PAUSED
         quartz_cron_expression: "00 00 23 * * ? *"
         timezone_id: "CET"
       tasks:
