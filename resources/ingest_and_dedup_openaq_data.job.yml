@@ -1,9 +1,9 @@
 resources:
   jobs:
     ingest_and_dedup_openaq_data:
-      name: Run OpenAQ ingestion pipeline and dedup data
+      name: OpenAQ - run ingestion pipeline, dedup, run aggregations
 
-      description: Run OpenAQ ingestion pipeline and deduplicate data
+      description: Run OpenAQ ingestion pipeline, deduplicate data, run aggregation pipeline
       max_concurrent_runs: 1
 
       parameters:
@@ -32,6 +32,12 @@ resources:
             source: WORKSPACE
           depends_on:
             - task_key: run_measurements_etl_pipeline
+        - task_key: run_aggregation_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.buildup_gold_openaq_tables.id}
+            full_refresh: false
+          depends_on:
+            - task_key: dedup_measurements
 
       environments:
       - environment_key: default
