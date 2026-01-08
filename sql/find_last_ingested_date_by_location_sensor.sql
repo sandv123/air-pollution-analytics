@@ -21,7 +21,7 @@ locations_sensors as (
 last_date as (
   select
     max(aqm.datetime_from) as last_date
-  from openaq_measurements_deduped aqm
+  from openaq_measurements aqm
 )
 select
   id,
