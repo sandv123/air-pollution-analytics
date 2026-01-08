@@ -18,7 +18,8 @@ target_schema = "01_bronze"
                         "datetime_from is not null": "datetime_from IS NOT NULL",
                         "value is not null": "value IS NOT NULL",
                         "location_id is not null": "location_id IS NOT NULL",
-                        "sensor_id is not null": "sensor_id IS NOT NULL"
+                        "sensor_id is not null": "sensor_id IS NOT NULL",
+                        "value is sensible": "value < 800"
 })
 def compute_air_quality_measurements_silver():
     df = (
