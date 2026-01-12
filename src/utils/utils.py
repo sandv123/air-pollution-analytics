@@ -31,7 +31,7 @@ class OpenAQConnectionManager:
         self._api_key = api_key
 
     
-    def __del(self):
+    def __del__(self):
         if self.client is not None:
             self.client.close()
 
@@ -61,6 +61,34 @@ def is_running_in_databricks() -> bool:
 
 
 def setup_environment(dbutils) -> dict[str, Any]:
+    """
+    Initialize and configure the environment for air pollution analytics.
+    Retrieves API credentials from Databricks secrets or environment variables,
+    parses command-line arguments for data fetching mode and parameters, and
+    constructs a configuration dictionary.
+    Args:
+        dbutils: Databricks utilities object for secrets retrieval. If None,
+                 assumes running in a local IDE environment.
+    Returns:
+        dict[str, Any]: Configuration dictionary containing:
+            - mode: (str) - Execution mode ('locations', 'measurements', or 'test')
+            - latitude: (float) - Latitude coordinate for location search (optional)
+            - longitude: (float) - Longitude coordinate for location search (optional)
+            - city: (str) - City name for location search (optional)
+            - location_id: (int) - Location ID for measurements query (optional)
+            - location_name: (str) - Location name for measurements query (optional)
+            - sensors: (list[str]) - List of sensor IDs to query (optional)
+            - date_from: (str) - Start date for measurements in 'YYYY-MM-DD' format (optional)
+            - date_to: (str) - End date for measurements in 'YYYY-MM-DD' format
+                       (defaults to yesterday if not provided)
+            - datastore_path: (str) - Path for data storage (optional)
+            - parameters: (list[str]) - Air quality parameters to fetch
+                         (['pm1', 'pm10', 'pm25', 'temperature'])
+            - api_key: (str) - OpenAQ API key for authentication
+    Note:
+        If date_to is not provided, it defaults to yesterday's date to ensure
+        complete daily data availability.
+    """
     # OpenAQ API key
     if dbutils is not None:
         print("Running inside Databricks")
@@ -91,8 +119,10 @@ def setup_environment(dbutils) -> dict[str, Any]:
 
     result = args.__dict__
 
+    # If date_to is not provided (e.g. when incrementally run daily), assume
+    # date_to=yesterday to make sure there is data available for the whole day
     if result.get("date_to") is None:
-        result["date_to"] = datetime.today().strftime('%Y-%m-%d')
+        result["date_to"] = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
 
     sensors = str(result.get("sensors"))
     if sensors and sensors[0].startswith("["):
@@ -104,7 +134,20 @@ def setup_environment(dbutils) -> dict[str, Any]:
     return result
 
 
-def store_file(datastore:str, filename: str, data: str, compression: str = "gzip"):
+def store_file(datastore:str, filename: str, data: str, compression: str = "gzip") -> None:
+    """
+    Store data in the datastore a file with optional compression. Can use gzip
+    and zip or store the data uncompressed.
+    
+    :param datastore: path to a directory, where the file will be stored
+    :type datastore: str
+    :param filename: name of the file, if compression is used gz or zip suffix is automatically added
+    :type filename: str
+    :param data: the data to store
+    :type data: str
+    :param compression: compression method, can be gzip, zip or none
+    :type compression: str
+    """
     content_to_store: io.BytesIO
     if compression == "zip":
         import zipfile
@@ -126,6 +169,18 @@ def store_file(datastore:str, filename: str, data: str, compression: str = "gzip
 
 
 def split_time_period(date_from_str: str, date_to_str: str) -> list[tuple[str, str]]:
+    """
+    Split a time period between date_from_str and date_to_str into chunks with
+    fixed boundaries (thresholds). This helps with idempotency of the pipeline
+    as the chunks, which have already been downloaded, won't be requested again
+    
+    :param date_from_str: start of the period, format - yyyy-dd-mm
+    :type date_from_str: str
+    :param date_to_str: end od the period, format - yyyy-dd-mm
+    :type date_to_str: str
+    :return: list of tuples with start and end of the chunks
+    :rtype: list[tuple[str, str]]
+    """
     date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
     date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
 
@@ -152,6 +207,12 @@ def split_time_period(date_from_str: str, date_to_str: str) -> list[tuple[str, s
 
 
 def file_downloaded(config, filename):
+    """
+    Check if file has already been downloaded
+    
+    :param config: dictionary with all config options
+    :param filename: file to check
+    """
     filename = config["datastore_path"] + filename 
     return os.path.exists(filename) or os.path.exists(filename+ '.zip') or os.path.exists(filename+ '.gz')
 
