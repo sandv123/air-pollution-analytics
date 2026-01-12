@@ -1,0 +1,14 @@
+resources:
+  pipelines:
+    buildup_gold_openmeteo_tables:
+      name: Build aggregates over openmeteo measurements in gold layer
+      catalog: air_polution_analytics_dev
+      schema: 02_bronze
+      serverless: true
+      channel: CURRENT
+      continuous: false
+      photon: true
+      root_path: ../src/pipelines/openmeteo_build_gold_layer
+      libraries:
+      -  glob:
+          include: ../src/pipelines/openmeteo_build_gold_layer/transformations/**

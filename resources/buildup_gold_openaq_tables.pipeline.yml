@@ -8,7 +8,7 @@ resources:
       channel: CURRENT
       continuous: false
       photon: true
-      root_path: ../src/pipelines/build_gold_layer
+      root_path: ../src/pipelines/openaq_build_gold_layer
       libraries:
       -  glob:
-          include: ../src/pipelines/build_gold_layer/transformations/**
+          include: ../src/pipelines/openaq_build_gold_layer/transformations/**
