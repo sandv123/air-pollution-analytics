@@ -1,4 +1,4 @@
-# Datalake framework for analysis of the air polution situation in the vicinity of Belgrade, RS
+# Datalake framework for analysis of the air pollution situation in the vicinity of Belgrade, RS
 
 ## Goal of the project
 
@@ -51,6 +51,20 @@ According to the **Medallion Architecture** principles the data is moved through
 4.  _Ingest data into_ `bronze` _tables_: a Lakeflow declariative pipeline is run to ingest the raw data into a Delta table and perform initial transformations. The tables are stored in `01_bronze` schema and Lakeflow pipeline expectations are applied to start improving the data quality.
 5.  _Deduplicate data and move to_ `silver`: a Lakeflow job runs a streaming query against the bronze data, for each record generates a unique ID, and deduplicates the data. Result is stored in a Delta table in the `02_silver` schema. The information about weather and polition sensors, locations, and measured parameters is extracted, the data is normalized. 
 6.  _Compute business aggregates_: a Lakeflow declarative pipeline processes the data to prepare hourly, daily and monthly aggregates, denormalize the data for easy consumption. Resulting aggregates are stored in the `03_gold` layer and used for data analysis.
+
+## Data quality
+
+Data quality is ensured by utilizing two mechanisms: quality expectation and deduplication via foreach batch device.
+
+Quality expectations are implemented in `silver` layer to ensure no erroneous or incomplete data ends up in production pipeline.
+
+Data is deduped also in `silver` to ensure idempotency.
+
+Thanks to data quality measures pipelines don't break `silver` and `gold` data, even if run multiple times or out of order.
+
+## Orchestration
+
+The pipelines and jobs are designed in such a way, that allows for both batch backfilling of historic data, and iterative daily ingestion. For every data source there are two jobs, that orchestrate backfill and iterative ingestion. Iterative job is scheduled to run automatically on a daily basis, but if for some reason a run is skipped or has failed, next one will correctly process this and catch up.
 
 ## Analytics
 
