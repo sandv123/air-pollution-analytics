@@ -14,12 +14,13 @@ This framework heavily relies on the following features of Databricks to establi
 2.  Lakeflow Spark Declarative Pipelines
 3.  Expectations
 4.  Unity Catalog
-5.  Delta Lake
-6.  Auto Loader
-7.  Asset Bundles
-8.  Unity Catalog
-9.  Spark Structured Streaming
-10.  Databricks SQL Warehouse
+5.  Secret management
+6.  Delta Lake
+7.  Auto Loader
+8.  Asset Bundles
+9.  Unity Catalog
+10.  Spark Structured Streaming
+11.  Databricks SQL Warehouse
 
 ## Data used in the analysis
 
@@ -52,7 +53,7 @@ According to the **Medallion Architecture** principles the data is moved through
 3.  _Store the raw data_: the raw data is stored in a landing volume within the `00_landing` schema.
 4.  _Ingest data into_ `bronze` _tables_: a Lakeflow declariative pipeline is run to ingest the raw data into a Delta table and perform initial transformations. The tables are stored in `01_bronze` schema and Lakeflow pipeline expectations are applied to start improving the data quality.
 5.  _Deduplicate data and move to_ `silver`: a Lakeflow job runs a streaming query against the bronze data, for each record generates a unique ID, and deduplicates the data. Result is stored in a Delta table in the `02_silver` schema. The information about weather and polition sensors, locations, and measured parameters is extracted, the data is normalized. 
-6.  _Compute business aggregates_: a Lakeflow declarative pipeline processes the data to prepare daily and hourly aggregates, denormalize the data for easy consumption. Resulting aggregates are stored in the `03_gold` layer and used for data analysis.
+6.  _Compute business aggregates_: a Lakeflow declarative pipeline processes the data to prepare hourly, daily and monthly aggregates, denormalize the data for easy consumption. Resulting aggregates are stored in the `03_gold` layer and used for data analysis.
 
 ## Analytics
 
