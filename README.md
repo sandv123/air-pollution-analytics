@@ -12,13 +12,14 @@ This framework heavily relies on the following features of Databricks to establi
 
 1.  Lakeflow Jobs
 2.  Lakeflow Spark Declarative Pipelines
-3.  Unity Catalog
-4.  Delta Lake
-5.  Auto Loader
-6.  Asset Bundles
-7.  Unity Catalog
-8.  Spark Structured Streaming
-9.  Databricks SQL Warehouse
+3.  Expectations
+4.  Unity Catalog
+5.  Delta Lake
+6.  Auto Loader
+7.  Asset Bundles
+8.  Unity Catalog
+9.  Spark Structured Streaming
+10.  Databricks SQL Warehouse
 
 ## Data used in the analysis
 
@@ -36,7 +37,7 @@ I will use data, publicly available for free from the following sources:
 
 ## Data architecture
 
-I will use the **Medallion Architecture** to gradually improve data quality and ensure the **pipeline idempotency**. To reflect that a separate `schema` has been created in the project `catalog`:
+I will use the **Medallion Architecture** to gradually improve data quality and ensure the **pipeline idempotency**. To reflect that a separate `schema` has been created in the project `catalog` for each layer:
 
 *   `00_landing` for storing raw data files as the come from external sources
 *   `01_bronze` for tables to store the unprocessed data
