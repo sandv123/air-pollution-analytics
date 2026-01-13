@@ -23,7 +23,7 @@ I will use data, publicly available for free from the following sources:
 ## Data architecture
 
 I will use the **Medalion Architecture** to gradually improve data quality and ensure the pipeline idempotency. The following picture illustrates the data flow:  
-![for the Medallion Architecture data flow: raw data from OpenAQ and Open-meteo APIs flows through landing and bronze layers for ingestion, then to silver layer for deduplication and normalization, and finally to gold layer for business aggregates used in analysis](./Data_flow_diagram.svg)
+![for the Medallion Architecture data flow: raw data from OpenAQ and Open-meteo APIs flows through landing and bronze layers for ingestion, then to silver layer for deduplication and normalization, and finally to gold layer for business aggregates used in analysis](./Data_flow_diagram.png)
 
 1.  _Setup the ingestion job_: depending on whether this is a backfill or an incremental data load operation, a SQL script is run to determine the parameters of the Lakeflow job.
 2.  _Retrieve the raw data_: a Lakeflow job runs a Python script to call the external API and retrieve the raw data.
