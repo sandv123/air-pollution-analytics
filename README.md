@@ -2,7 +2,7 @@
 
 ## Goal of the project
 
-This is a project to build data vehicles, that would allow for analyzis of the root causes of air polition in Belgrade, RS . Main goal is for me to get my hands as dirty as I can with the insides of Databricks, Spark, SQL, Python, and everything else associated with the profession of Data Engineer.
+This is a project to build data vehicles, that would allow for analyzis of the root causes of air pollution in Belgrade, RS . Main goal is for me to get my hands as dirty as I can with the insides of Databricks, Spark, SQL, Python, and everything else associated with the profession of Data Engineer.
 
 ### Features of Databricks
 
