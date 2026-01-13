@@ -2,11 +2,9 @@
 
 ## Goal of the project
 
-This is a pet project. Main goal is for me to get my hands as dirty as I can with the insides of Databricks, Spark, SQL, Python, and everything else associated with the profession of Data Engineer.
+This is a project to build data vehicles, that would allow for analyzis of the root causes of air polition in Belgrade, RS . Main goal is for me to get my hands as dirty as I can with the insides of Databricks, Spark, SQL, Python, and everything else associated with the profession of Data Engineer.
 
-I will have to see as I go whether this projects steers itself into something that can be useful to others.
-
-## Features of Databricks
+### Features of Databricks
 
 This framework heavily relies on the following features of Databricks to establish the data flow and ensure data quality:
 
@@ -14,13 +12,12 @@ This framework heavily relies on the following features of Databricks to establi
 2.  Lakeflow Spark Declarative Pipelines
 3.  Expectations
 4.  Unity Catalog
-5.  Secret management
+5.  Secret Management
 6.  Delta Lake
 7.  Auto Loader
 8.  Asset Bundles
-9.  Unity Catalog
-10.  Spark Structured Streaming
-11.  Databricks SQL Warehouse
+9.  Spark Structured Streaming
+10.  Databricks SQL Warehouse
 
 ## Data used in the analysis
 
