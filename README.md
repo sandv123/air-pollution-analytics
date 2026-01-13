@@ -23,7 +23,7 @@ I will use data, publicly available for free from the following sources:
 ## Data architecture
 
 I will use the **Medalion Architecture** to gradually improve data quality and ensure the pipeline idempotency. The following picture illustrates the data flow:  
-!\[for the Medallion Architecture data flow: raw data from OpenAQ and Open-meteo APIs flows through landing and bronze layers for ingestion, then to silver layer for deduplication and normalization, and finally to gold layer for business aggregates used in analysis\](Data flow diagram.drawio.png)
+![for the Medallion Architecture data flow: raw data from OpenAQ and Open-meteo APIs flows through landing and bronze layers for ingestion, then to silver layer for deduplication and normalization, and finally to gold layer for business aggregates used in analysis](./Data_flow_diagram.svg)
 
 1.  _Setup the ingestion job_: depending on whether this is a backfill or an incremental data load operation, a SQL script is run to determine the parameters of the Lakeflow job.
 2.  _Retrieve the raw data_: a Lakeflow job runs a Python script to call the external API and retrieve the raw data.
@@ -31,6 +31,10 @@ I will use the **Medalion Architecture** to gradually improve data quality and e
 4.  _Ingest data into_ `bronze` _tables_: a Lakeflow declariative pipeline is run to ingest the raw data into a Delta table and perform initial transformations. The tables are stored in `01_bronze` schema and Lakeflow pipeline expectations are applied to start improving the data quality.
 5.  _Deduplicate data and move to_ `silver`: a Lakeflow job runs a streaming query against the bronze data, for each record generates a unique ID, and deduplicates the data. Result is stored in a Delta table in the `02_silver` schema. The information about weather and polition sensors, locations, and measured parameters is extracted, the data is normalized. 
 6.  _Compute business aggregates_: a Lakeflow declarative pipeline processes the data to prepare daily and hourly aggregates, denormalize the data for easy consumption. Resulting aggregates are stored in the `03_gold` layer and used for data analysis.
+
+## Analytics
+
+I plan to be able to run the following analytics:
 
 ## Architectural decisions
 
