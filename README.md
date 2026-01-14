@@ -70,8 +70,8 @@ The pipelines and jobs are designed in such a way, that allows for both batch ba
 
 The architecture is developed with the view of being able to support the following analytics:
 
-1.  Test correlation between temperature and polition levels. Hypothesis being that polution is a result of people having to burn nasty stuff to warm up their houses.
-2.  Test correlation between the wind speed/direction and polition levels. Hypothesis - polition is a result of industrial plants (power plant?), situated outside of Belgrade.
+1.  Test correlation between temperature and pollution levels. Hypothesis being that pollution is a result of people having to burn nasty stuff to warm up their houses.
+2.  Test correlation between the wind speed/direction and pollution levels. Hypothesis - pollution is a result of industrial plants (power plant?), situated outside of Belgrade.
 3.  Determine when is the best time to air your apartment depending on the day of week.
 
 ## Architectural decisions
