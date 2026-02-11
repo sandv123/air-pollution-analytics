@@ -1,19 +1,13 @@
 USE CATALOG IDENTIFIER(:catalog);
 USE IDENTIFIER(:schema);
 
-with locations as (
-  select id, explode(sensor_id_arr) as sensor_id, name
-  from openaq_locations
-  where
-    city = :city
-),
-locations_sensors as (
+with locations_sensors as (
   select
-    locations.id as id,
-    sensor_id,
-    locations.name as name
-  from locations
-    join openaq_sensors on locations.sensor_id = openaq_sensors.id
+    openaq_locations.id as id,
+    openaq_sensors.id as sensor_id,
+    openaq_locations.name as name
+  from openaq_locations
+    join openaq_sensors on openaq_locations.id = openaq_sensors.location_id
     join openaq_parameters on openaq_sensors.parameter_id = openaq_parameters.id
   where
     openaq_parameters.name in ("pm10", "pm25", "co", "so2")

@@ -51,8 +51,7 @@ def locations():
             col("is_mobile"),
             col("is_monitor"),
             col("latitude"),
-            col("longitude"),
-            col("sensors.id").alias("sensor_id_arr").cast(ArrayType(IntegerType()))
+            col("longitude")
         )
     )
 
@@ -65,7 +64,8 @@ def sensors_temp():
         sensors_df.select(
             col("sensors.id").alias("id"),
             col("sensors.name").alias("name"),
-            col("sensors.parameter").alias("parameter")
+            col("sensors.parameter").alias("parameter"),
+            col("id").alias("location_id")
         )
     )
 
@@ -83,6 +83,7 @@ def sensors():
             .select(
                 col("id").cast("int"),
                 col("name"),
+                col("location_id"),
                 col("parameter.id").alias("parameter_id").cast("int")
             )
     )
