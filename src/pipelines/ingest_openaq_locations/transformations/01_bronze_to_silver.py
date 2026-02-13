@@ -30,12 +30,26 @@ def locations_temp():
     )
 
 
+dim_locations_schema = """
+    location_id INT NOT NULL,
+    name STRING NOT NULL,
+    locality STRING,
+    country STRING,
+    city STRING NOT NULL,
+    is_mobile BOOLEAN,
+    is_monitor BOOLEAN,
+    latitude FLOAT,
+    longitude FLOAT,
+    PRIMARY KEY (location_id) RELY
+"""
+
 @dp.table(
-    name=f"{catalog}.{silver_schema}.openaq_locations",
-    comment="Cleaned Air quality locations",
+    name=f"{catalog}.{silver_schema}.dim_pollution_locations",
+    comment="Dimension table for OpenAQ locations",
+    schema=dim_locations_schema
 )
 @dp.expect_all_or_drop({
-    "id is not null": "id IS NOT NULL",
+    "location_id is not null": "location_id IS NOT NULL",
     "name is not null": "name IS NOT NULL",
     "city is not null": "city IS NOT NULL"
 })
@@ -43,7 +57,7 @@ def locations():
     locations_df = spark.readStream.table("locations_temp")
     return (
         locations_df.select(
-            col("id"),
+            col("id").alias("location_id"),
             col("name"),
             col("locality"),
             col("country"),
@@ -70,39 +84,59 @@ def sensors_temp():
     )
 
 
-@dp.table(
-    name=f"{catalog}.{silver_schema}.openaq_sensors",
-    comment="Cleaned OpenAQ Sensor information",
-)
-@dp.expect_all_or_drop({
-    "id is not null": "id IS NOT NULL"
-})
-def sensors():
-    return (
-        spark.readStream.table("sensors_temp")
-            .select(
-                col("id").cast("int"),
-                col("name"),
-                col("location_id"),
-                col("parameter.id").alias("parameter_id").cast("int")
-            )
-    )
-
+dim_parameters_schema = """
+    parameter_id INT NOT NULL,
+    display_name STRING,
+    name STRING NOT NULL,
+    units STRING,
+    PRIMARY KEY (parameter_id) RELY
+"""
 
 @dp.table(
-    name=f"{catalog}.{silver_schema}.openaq_parameters",
-    comment="Cleaned OpenAQ Sensor Parameters information",
+    name=f"{catalog}.{silver_schema}.dim_pollution_parameters",
+    comment="Dimension table for OpenAQ Sensor Parameters information",
+    schema=dim_parameters_schema
 )
 @dp.expect_all_or_drop({
-    "id is not null": "id IS NOT NULL",
+    "parameter_id is not null": "parameter_id IS NOT NULL",
     "name is not null": "name IS NOT NULL",
 })
 def parameters():
     return (
         spark.readStream.table("sensors_temp").select(
-            col("parameter.id").cast("int").alias("id"),
+            col("parameter.id").cast("int").alias("parameter_id"),
             col("parameter.displayName").alias("display_name"),
             col("parameter.name").alias("name"),
             col("parameter.units").alias("units")
         ).distinct()
+    )
+
+
+dim_sensors_schema = f"""
+    sensor_id INT NOT NULL,
+    name STRING NOT NULL,
+    location_id INT NOT NULL REFERENCES {catalog}.{silver_schema}.dim_pollution_locations(location_id) RELY,
+    parameter_id INT NOT NULL REFERENCES {catalog}.{silver_schema}.dim_pollution_parameters(parameter_id) RELY,
+    PRIMARY KEY (sensor_id) RELY
+"""
+
+@dp.table(
+    name=f"{catalog}.{silver_schema}.dim_pollution_sensors",
+    comment="Dimension table for OpenAQ Sensor information",
+    schema=dim_sensors_schema
+)
+@dp.expect_all_or_drop({
+    "sensor_id is not null": "sensor_id IS NOT NULL",
+    "location_id is not null": "location_id IS NOT NULL",
+    "parameter_id is not null": "parameter_id IS NOT NULL"
+})
+def sensors():
+    return (
+        spark.readStream.table("sensors_temp")
+            .select(
+                col("id").cast("int").alias("sensor_id"),
+                col("name"),
+                col("location_id"),
+                col("parameter.id").alias("parameter_id").cast("int")
+            )
     )
