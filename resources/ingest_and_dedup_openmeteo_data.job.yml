@@ -39,6 +39,12 @@ resources:
             source: WORKSPACE
           depends_on:
             - task_key: run_measurements_etl_pipeline
+        - task_key: run_aggregation_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.buildup_gold_openmeteo_tables.id}
+            full_refresh: false
+          depends_on:
+            - task_key: dedup_measurements
 
       environments:
       - environment_key: default
