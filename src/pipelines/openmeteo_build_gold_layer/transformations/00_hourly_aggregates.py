@@ -7,18 +7,19 @@ gold_schema = "03_gold"
 
 
 @dp.materialized_view(
-    name=f"{catalog}.{gold_schema}.temperature_measurements_hourly",
-    comment="Gold materialized view that stores hourly values for openmeteo temperature measurements"
+    name=f"{catalog}.{gold_schema}.agg_weather_hourly",
+    comment="Gold materialized view that stores hourly values for openmeteo weather measurements"
 )
 def hourly():
-    df_measurements = spark.read.table(f"{catalog}.{silver_schema}.temperature_measurements")
-    df_locations = spark.read.table(f"{catalog}.{silver_schema}.temperature_locations")
+    df_measurements = spark.read.table(f"{catalog}.{silver_schema}.fct_weather")
+    df_locations = spark.read.table(f"{catalog}.{silver_schema}.dim_weather_locations")
 
     return (
         df_measurements.join(df_locations, "location_id")
         .select(
-            df_measurements.datetime.alias("datetime"),
-            df_measurements.location_id.alias("location_id"),
+            df_measurements.date_int,
+            df_measurements.time_int,
+            df_measurements.location_id,
             df_locations.city,
             df_locations.latitude,
             df_locations.longitude,
