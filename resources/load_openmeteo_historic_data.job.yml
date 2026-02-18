@@ -1,7 +1,7 @@
 resources:
   jobs:
     load_openmeteo_data:
-      name: Backfill historic openmeteo temperature data
+      name: Openmeteo - Backfill historic weather data
 
       description: Download historic data from openmeteo API, ingest and dedup the data
       max_concurrent_runs: 1

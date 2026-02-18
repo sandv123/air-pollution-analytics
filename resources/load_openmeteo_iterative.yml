@@ -1,7 +1,7 @@
 resources:
   jobs:
     load_openmeteo_iterative:
-      name: Ingest newest openmeteo temperature data
+      name: Openmeteo - Ingest newest weather data
 
       description: Download newest data from openmeteo API, ingest and dedup the data
       max_concurrent_runs: 1

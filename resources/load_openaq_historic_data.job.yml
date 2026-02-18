@@ -2,7 +2,7 @@
 resources:
   jobs:
     load_openaq_data:
-      name: Backfill historic OpenAQ air polution data
+      name: OpenAQ - Backfill historic air polution data
 
       description: Download historic data from OpenAQ API, ingest and dedup the data
       max_concurrent_runs: 1

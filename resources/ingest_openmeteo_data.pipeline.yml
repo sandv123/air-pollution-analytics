@@ -1,7 +1,7 @@
 resources:
   pipelines:
     ingest-openmeteo-measurements:
-      name: Ingest and Clean Open-meteo Data
+      name: Openmeteo - Ingest and Clean weather Data
       catalog: air_polution_analytics_dev
       schema: 01_bronze
       serverless: true

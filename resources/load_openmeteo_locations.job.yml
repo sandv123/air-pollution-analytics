@@ -1,7 +1,7 @@
 resources:
   jobs:
     load_openmeteo_locations:
-      name: Populate openmeteo locations
+      name: Openmeteo - Populate weather locations
 
       description: Populate openmeteo locations dimension from raw data in bronze temperature_measurements
       max_concurrent_runs: 1

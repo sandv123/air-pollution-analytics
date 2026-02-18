@@ -1,7 +1,7 @@
 resources:
   jobs:
     ingest_and_dedup_openmeteo_data:
-      name: Run openmeteo ingestion pipeline and dedup data
+      name: Openmeteo - Run ingestion pipeline, dedup, run aggregations
 
       description: Run openmeteo ingestion pipeline and deduplicate data
       max_concurrent_runs: 1

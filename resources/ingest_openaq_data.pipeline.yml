@@ -1,7 +1,7 @@
 resources:
   pipelines:
     ingest-openaq-measurements:
-      name: Ingest and Clean OpenAQ Measurements
+      name: OpenAQ - Ingest and clean pollution measurements
       catalog: air_polution_analytics_dev
       schema: 01_bronze
       serverless: true

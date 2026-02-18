@@ -2,7 +2,7 @@
 resources:
   jobs:
     load_openaq_locations:
-      name: Load air quality locations through OpenAQ API
+      name: OpenAQ - Load air quality locations through
 
       description: Job to run python script, calling OpenAQ API to extract the locations metadata
       max_concurrent_runs: 1

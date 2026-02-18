@@ -1,7 +1,7 @@
 resources:
   jobs:
     load_openaq_iterative:
-      name: Ingest newest OpenAQ air polution data
+      name: OpenAQ - Ingest newest air polution data
 
       description: Download newest data from OpenAQ API, ingest and dedup the data
       max_concurrent_runs: 1

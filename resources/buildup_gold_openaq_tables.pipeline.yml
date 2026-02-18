@@ -1,7 +1,7 @@
 resources:
   pipelines:
     buildup_gold_openaq_tables:
-      name: Build aggregates over OpenAQ measurements in gold layer
+      name: OpenAQ - Build aggregates over pollution measurements in gold layer
       catalog: air_polution_analytics_dev
       schema: 02_bronze
       serverless: true

@@ -1,7 +1,7 @@
 resources:
   jobs:
     ingest_and_dedup_openaq_data:
-      name: OpenAQ - run ingestion pipeline, dedup, run aggregations
+      name: OpenAQ - Run ingestion pipeline, dedup, run aggregations
 
       description: Run OpenAQ ingestion pipeline, deduplicate data, run aggregation pipeline
       max_concurrent_runs: 1
